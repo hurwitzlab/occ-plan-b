@@ -1,0 +1,27 @@
+{
+  "name": "occ-plan-b",
+  "version": "1.0.0",
+  "description": "Hadoop job service",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "Matt Bomhoff",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.18.1",
+    "cors": "^2.8.4",
+    "express": "^4.15.4",
+    "shortid": "^2.2.8",
+    "sqlite3": "^3.1.11"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hurwitzlab/occ-plan-b.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hurwitzlab/occ-plan-b/issues"
+  },
+  "homepage": "https://github.com/hurwitzlab/occ-plan-b#readme"
+}

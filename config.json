@@ -1,0 +1,117 @@
+{
+    "serverPort": 3008,
+    "remoteHost": "n01p.hpc.arizona.edu",
+    "remoteUsername": "mbomhoff",
+    "remoteStagingPath": "/tmp/occ",
+    "remoteTargetPath": "/user/mbomhoff/occ",
+    "libraRunScript": "/home/mbomhoff/run_libra.sh",
+    "apps": {
+        "libra-1.0": {
+            "id": "libra-1.0",
+            "name": "libra-1.0",
+            "version": "1.0",
+            "shortDescription": "Compute Similarity between Large Metagenomic Samples",
+            "helpURI": "",
+            "inputs": [
+                {
+                    "id": "IN_DIR",
+                    "details": {
+                        "label": "Directory of input FASTA files"
+                    },
+                    "value": {
+                        "order": 0,
+                        "required": true,
+                        "default": ""
+                    }
+                }
+            ],
+            "parameters": [
+                {
+                    "id": "KMER_SIZE",
+                    "details": {
+                        "label": "Kmer size",
+                        "argument": "-k",
+                        "showArgument": true
+                    },
+                    "value": {
+                        "order": 0,
+                        "type": "number",
+                        "required": false,
+                        "default": "20"
+                    }
+                },
+                {
+                    "id": "NUM_TASKS",
+                    "details": {
+                        "label": "Number of tasks (reducers)",
+                        "argument": "-t",
+                        "showArgument": true
+                    },
+                    "value": {
+                        "order": 1,
+                        "type": "number",
+                        "required": false,
+                        "default": "1"
+                    }
+                },
+                {
+                    "id": "FILTER_ALG",
+                    "details": {
+                        "label": "Kmer filter algorithm",
+                        "argument": "-f",
+                        "showArgument": true
+                    },
+                    "value": {
+                        "order": 2,
+                        "type": "enumeration",
+                        "required": false,
+                        "default": "NOTUNIQUE",
+                        "enum_values": [
+                            { "NONE": "None" },
+                            { "STDDEV": "Standard deviation" },
+                            { "STDDEV2": "Two's standard deviation" },
+                            { "NOTUNIQUE": "Not unique" }
+                        ]
+                    }
+                },
+                {
+                    "id": "RUN_MODE",
+                    "details": {
+                        "label": "Run mode",
+                        "argument": "-m",
+                        "showArgument": true
+                    },
+                    "value": {
+                        "order": 3,
+                        "type": "enumeration",
+                        "required": true,
+                        "default": "MAP",
+                        "enum_values": [
+                            { "MAP": "MAP" },
+                            { "REDUCE": "REDUCE" }
+                        ]
+                    }
+                },
+                {
+                    "id": "WEIGHTING_ALG",
+                    "details": {
+                        "label": "Weighting algorithm",
+                        "argument": "-w",
+                        "showArgument": true
+                    },
+                    "value": {
+                        "order": 4,
+                        "type": "enumeration",
+                        "required": false,
+                        "default": "LOGALITHM",
+                        "enum_values": [
+                            { "LOGALITHM": "Logarithm" },
+                            { "BOOLEAN": "Boolean" },
+                            { "NATURAL": "Natural logarithm" }
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+}
