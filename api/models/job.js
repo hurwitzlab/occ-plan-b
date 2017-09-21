@@ -45,8 +45,8 @@ class Job {
 
         console.log(this.inputs);
 
-        var staging_path = config.remoteStagingPath + '/' + this.id + '/';
-        var target_path = config.remoteTargetPath + '/data/' + this.id + '/';
+        var staging_path = config.remoteStagingPath + '/' + this.id + '/data/';
+        var target_path = config.remoteTargetPath + '/' + this.id + '/data/';
 
         remote_command('mkdir -p ' + staging_path);
 
@@ -72,24 +72,20 @@ class Job {
         var RUN_MODE = this.parameters.RUN_MODE || "map";
         var WEIGHTING_ALG = this.parameters.WEIGHTING_ALG || "LOGALITHM";
 
-        var target_path = config.remoteTargetPath + '/data/' + this.id + '/';
+        var target_path = config.remoteTargetPath + '/' + this.id + '/data/';
         var input_path = target_path + pathlib.basename(this.inputs.IN_DIR);
 
         remote_command('nohup ' + config.libraRunScript + ' ' + this.id + ' ' + input_path + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' &');
     }
 
-    poll() {
-        var out = remote_command('ls ' + config.remoteStagingPath + '/' + this.id + '.done');
-        if (out.stdout)
-            return 1;
-        return;
-    }
-
     pushOutputs() {
-        var hdfs_output_path = config.remoteTargetPath + '/score/' + this.id + '/';
-        var ds_output_path = '/iplant/home/' + config.remoteUsername + '/analyses/' + this.id
+        var hdfs_output_path = config.remoteTargetPath + '/' + this.id + '/score/';
+        var staging_path = config.remoteStagingPath + '/' + this.id;
+        var ds_output_path = '/iplant/home/' + config.remoteUsername + '/analyses/' + 'occ-' + this.id
 
-        remote_command('iput -KTr ' + hdfs_output_path + ' ' + ds_output_path);
+        remote_command('hdfs dfs -get ' + hdfs_output_path + ' ' + staging_path);
+
+        remote_command('iput -KTr ' + staging_path + '/score' + ' ' + ds_output_path);
     }
 
     statusString() {
@@ -117,10 +113,8 @@ function update() {
             job.run();
         }
         else if (job.status == STATUS.RUNNING) {
-            if (job.poll()) {
-                job.transition(STATUS.PUSHING_OUTPUTS);
-                job.pushOutputs();
-            }
+            job.transition(STATUS.PUSHING_OUTPUTS);
+            job.pushOutputs();
         }
         else if (job.status == STATUS.PUSHING_OUTPUTS) {
             job.transition(STATUS.FINISHED)
@@ -157,6 +151,4 @@ function init() {
 
 exports.Job = Job;
 exports.get = get;
-exports.update = update;
-exports.statusToString = statusToString;
 exports.init = init;
