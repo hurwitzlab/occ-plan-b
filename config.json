@@ -4,7 +4,6 @@
     "remoteUsername": "mbomhoff",
     "remoteStagingPath": "/tmp/occ",
     "remoteTargetPath": "/user/mbomhoff/occ",
-    "libraRunScript": "/home/mbomhoff/run_libra.sh",
     "apps": {
         "libra-1.0": {
             "id": "libra-1.0",

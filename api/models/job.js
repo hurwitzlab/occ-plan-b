@@ -74,9 +74,10 @@ class Job {
 
         var target_path = config.remoteTargetPath + '/' + this.id + '/data/';
         var input_path = target_path + pathlib.basename(this.inputs.IN_DIR);
+        var run_script = config.remoteStagingPath + '/run_libra.sh';
 
         // FIXME is 'nohup' necessary?  And '&' isn't working
-        remote_command('nohup ' + config.libraRunScript + ' ' + this.id + ' ' + input_path + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' &');
+        remote_command('nohup sh ' + run_script + ' ' + this.id + ' ' + input_path + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' &');
     }
 
     pushOutputs() {
@@ -138,8 +139,20 @@ function remote_command(cmd_str) {
     }
 }
 
+function remote_copy(local_file) {
+    var cmdStr = 'scp ' + local_file + ' ' + config.remoteHost + ':' + config.remoteStagingPath;
+    console.log("Copying to remote: " + cmdStr);
+
+    const cmd = spawn('scp', [ local_file, config.remoteHost + ':' + config.remoteStagingPath ]);
+    console.log( `stderr: ${cmd.stderr.toString()}` );
+    console.log( `stdout: ${cmd.stdout.toString()}` );
+}
+
 function init() {
     console.log("init");
+
+    // Copy job execution script to remote system
+    remote_copy('./run_libra.sh')
 
     // Start update loop
     setTimeout(() => {
