@@ -75,15 +75,13 @@ class Job {
         var target_path = config.remoteTargetPath + '/' + this.id + '/data/';
         var input_path = target_path + pathlib.basename(this.inputs.IN_DIR);
 
+        // FIXME is 'nohup' necessary?  And '&' isn't working
         remote_command('nohup ' + config.libraRunScript + ' ' + this.id + ' ' + input_path + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' &');
     }
 
     pushOutputs() {
-        var hdfs_output_path = config.remoteTargetPath + '/' + this.id + '/score/';
         var staging_path = config.remoteStagingPath + '/' + this.id;
         var ds_output_path = '/iplant/home/' + config.remoteUsername + '/analyses/' + 'occ-' + this.id
-
-        remote_command('hdfs dfs -get ' + hdfs_output_path + ' ' + staging_path);
 
         remote_command('iput -KTr ' + staging_path + '/score' + ' ' + ds_output_path);
     }
