@@ -76,6 +76,9 @@ class Job {
         var input_path = target_path + pathlib.basename(this.inputs.IN_DIR);
         var run_script = config.remoteStagingPath + '/run_libra.sh';
 
+        // Copy job execution script to remote system
+        remote_copy('./run_libra.sh');
+
         // FIXME is 'nohup' necessary?  And '&' isn't working
         remote_command('nohup sh ' + run_script + ' ' + this.id + ' ' + input_path + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' &');
     }
@@ -150,9 +153,6 @@ function remote_copy(local_file) {
 
 function init() {
     console.log("init");
-
-    // Copy job execution script to remote system
-    remote_copy('./run_libra.sh')
 
     // Start update loop
     setTimeout(() => {
