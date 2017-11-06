@@ -21,7 +21,7 @@ var jobs = {};
 
 class Job {
     constructor(props) {
-        this.id = shortid.generate();
+        this.id = 'planb-' + shortid.generate();
         this.name = props.name;
         this.appId = props.appId;
         this.inputs = props.inputs;
