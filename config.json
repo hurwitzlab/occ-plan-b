@@ -15,12 +15,16 @@
                 {
                     "id": "IN_DIR",
                     "details": {
-                        "label": "Directory of input FASTA files"
+                        "label": "Directory of input FASTA files",
+                        "description": ""
                     },
                     "value": {
                         "order": 0,
                         "required": true,
                         "default": ""
+                    },
+                    "semantics": {
+                        "fileTypes": [ "fasta" ]
                     }
                 }
             ],
@@ -29,6 +33,7 @@
                     "id": "KMER_SIZE",
                     "details": {
                         "label": "Kmer size",
+                        "description": "",
                         "argument": "-k",
                         "showArgument": true
                     },
@@ -43,6 +48,7 @@
                     "id": "NUM_TASKS",
                     "details": {
                         "label": "Number of tasks (reducers)",
+                        "description": "",
                         "argument": "-t",
                         "showArgument": true
                     },
@@ -57,6 +63,7 @@
                     "id": "FILTER_ALG",
                     "details": {
                         "label": "Kmer filter algorithm",
+                        "description": "",
                         "argument": "-f",
                         "showArgument": true
                     },
@@ -77,6 +84,7 @@
                     "id": "RUN_MODE",
                     "details": {
                         "label": "Run mode",
+                        "description": "",
                         "argument": "-m",
                         "showArgument": true
                     },
@@ -95,6 +103,7 @@
                     "id": "WEIGHTING_ALG",
                     "details": {
                         "label": "Weighting algorithm",
+                        "description": "",
                         "argument": "-w",
                         "showArgument": true
                     },
