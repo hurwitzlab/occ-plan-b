@@ -4,15 +4,14 @@ const pathlib = require('path');
 const shortid = require('shortid');
 const config = require('../../config.json');
 
-const db = new dblib.Database(config.dbFilePath);
-
 const STATUS = {
     CREATED:         "CREATED",
     STAGING_INPUTS:  "STAGING_INPUTS",
     RUNNING:         "RUNNING",
     PUSHING_OUTPUTS: "PUSHING_OUTPUTS",
     FINISHED:        "FINISHED",
-    FAILED:          "FAILED"
+    FAILED:          "FAILED",
+    STOPPED:         "STOPPED"
 }
 
 class Job {
@@ -22,8 +21,8 @@ class Job {
         this.appId = props.appId;
         this.startTime = props.startTime;
         this.endTime = props.endTime;
-        this.inputs = props.inputs;
-        this.parameters = props.parameters;
+        this.inputs = props.inputs || {};
+        this.parameters = props.parameters || {};
         this.status = props.status || STATUS.CREATED;
     }
 
@@ -90,29 +89,37 @@ class Job {
 
 class JobManager {
     constructor(props) {
-        this.jobs = {};
+        this.isMaster = props.isMaster;
+        console.log("isMaster="+props.isMaster);
         this.UPDATE_INITIAL_DELAY = 5000; // milliseconds
         this.UPDATE_REFRESH_DELAY = 1000; // milliseconds
 
         this.init();
     }
 
-    init() {
+    async init() {
         var self = this;
 
         console.log("JobManager.init");
 
+        this.db = new dblib.Database();
+        await this.db.open(config.dbFilePath);
+
+        // Set pending jobs to cancelled
+        await this.db.stopJobs();
+
         // Start update loop
-        setTimeout(() => {
-            self.update();
-        }, this.UPDATE_INITIAL_DELAY);
+        if (this.isMaster)
+            setTimeout(() => {
+                self.update();
+            }, this.UPDATE_INITIAL_DELAY);
     }
 
     async get(id) {
-        console.log("JobManager.get ", (id ? id : ""));
+        //console.log("JobManager.get ", (id ? id : ""));
 
         if (typeof id == 'undefined') {
-            const jobs = await db.getJobs()
+            const jobs = await this.db.getJobs()
             return jobs.map(
                 job => {
                     return new Job({
@@ -120,6 +127,8 @@ class JobManager {
                         appId: job.app_id,
                         name: job.name,
                         status: job.status,
+                        inputs: JSON.parse(job.inputs),
+                        parameters: JSON.parse(job.parameters),
                         startTime: job.start_time,
                         endTime: job.end_time
                     });
@@ -127,13 +136,15 @@ class JobManager {
             );
         }
         else {
-            const j = await db.getJob(id);
+            const j = await this.db.getJob(id);
             console.log(j);
             return new Job({
                 id: j.job_id,
                 appId: j.app_id,
                 name: j.name,
                 status: j.status,
+                inputs: JSON.parse(j.inputs),
+                parameters: JSON.parse(j.parameters),
                 startTime: j.start_time,
                 endTime: j.end_time
             });
@@ -148,29 +159,34 @@ class JobManager {
             return;
         }
 
-        return db.addJob(job.id, job.appId, job.name, job.status);
+        return this.db.addJob(job.id, job.appId, job.name, job.status, job.inputs, job.parameters);
     }
 
-    update() {
+    async update() {
         var self = this;
 
         //console.log("Update ...")
-        Object.values(this.jobs).forEach(
-            job => {
+        var jobs = await self.get();
+        jobs.forEach(
+            async job => {
                 if (job.status == STATUS.CREATED) {
                     job.transition(STATUS.STAGING_INPUTS);
+                    await this.db.updateJob(job.id, job.status);
                     job.stageInputs();
                 }
                 else if (job.status == STATUS.STAGING_INPUTS) {
                     job.transition(STATUS.RUNNING);
+                    await this.db.updateJob(job.id, job.status);
                     job.run();
                 }
                 else if (job.status == STATUS.RUNNING) {
                     job.transition(STATUS.PUSHING_OUTPUTS);
+                    await this.db.updateJob(job.id, job.status);
                     job.pushOutputs();
                 }
                 else if (job.status == STATUS.PUSHING_OUTPUTS) {
                     job.transition(STATUS.FINISHED)
+                    await this.db.updateJob(job.id, job.status);
                 }
             }
         );

@@ -7,9 +7,9 @@ const config = require('../config.json');
 
 
 // Initialize job queue
-var jobManager = new job.JobManager();
+//var jobManager = new job.JobManager();
 
-module.exports = function(app) {
+module.exports = function(app, jobManager) {
     app.use(cors());
     app.use(bodyParser.json()); // support json encoded bodies
     app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
@@ -87,7 +87,7 @@ module.exports = function(app) {
     });
 
     app.post('/jobs/v2', async (request, response) => {
-        console.log('POST /jobs/v2');
+        console.log("POST /jobs/v2\n", request.body);
 
         try {
             var j = new job.Job(request.body);
