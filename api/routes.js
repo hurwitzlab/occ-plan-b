@@ -1,13 +1,13 @@
 'use strict';
 
-const cors = require('cors');
 const job  = require('./models/job');
+const cors = require('cors');
 const bodyParser = require('body-parser');
 const config = require('../config.json');
 
 
 // Initialize job queue
-job.init();
+var jobManager = new job.JobManager();
 
 module.exports = function(app) {
     app.use(cors());
@@ -33,62 +33,79 @@ module.exports = function(app) {
         });
     });
 
-    app.get('/jobs/v2', function(request, response) {
+    app.get('/jobs/v2', async (request, response) => {
         console.log('GET /jobs/v2');
 
-        var jobs = Object.values(job.get()).map(job => {
-            return {
-                id: job.id,
-                name: job.name,
-                appId: job.appId,
-                startTime: job.startTime,
-                endTime: job.endTime,
-                status: job.statusString()
+        try {
+            var jobs = await jobManager.get();
+            if (jobs) {
+                response.json({
+                    status: "success",
+                    result: jobs
+                });
             }
-        });
-
-        response.json({
-            status: "success",
-            result: jobs
-        });
+            else {
+                response.json({
+                    status: "success",
+                    result: []
+                });
+            }
+        }
+        catch (err) {
+            response.json({
+                status: "error",
+                message: err
+            });
+        }
     });
 
-    app.get('/jobs/v2/:id(\\S+)', function(request, response) {
+    app.get('/jobs/v2/:id(\\S+)', async (request, response) => {
         var id = request.params.id;
         console.log('GET /jobs/v2/' + id);
 
-        var j = job.get(id);
-        if (!j) {
-            response.json({
-                status: "failure",
-                message: "Job " + id + " not found"
-            });
-            return;
-        }
-
-        response.json({
-            status: "success",
-            result: {
-                id: j.id,
-                status: j.statusString(),
-                appId: j.appId,
-                name: j.name
+        try {
+            var j = await jobManager.get(id);
+            if (!j) {
+                response.json({
+                    status: "error",
+                    message: "Job " + id + " not found"
+                });
+                return;
             }
-        });
+
+            response.json({
+                status: "success",
+                result: j
+            });
+        }
+        catch (err) {
+            response.json({
+                status: "error",
+                message: err
+            });
+        }
     });
 
-    app.post('/jobs/v2', function(request, response) {
+    app.post('/jobs/v2', async (request, response) => {
         console.log('POST /jobs/v2');
 
-        var j = new job.Job(request.body)
-        j.submit();
+        try {
+            var j = new job.Job(request.body);
+            await jobManager.submit(j);
 
-        response.json({
-            status: "success",
-            result: {
-                id: j.id
-            }
-        });
+            response.json({
+                status: "success",
+                result: {
+                    id: j.id
+                }
+            });
+        }
+        catch (err) {
+            response.json({
+                status: "error",
+                message: err
+            });
+        }
     });
 
     app.get('/profiles/v2/me', function(request, response) {

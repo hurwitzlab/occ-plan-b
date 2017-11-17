@@ -4,6 +4,7 @@
     "remoteUsername": "mbomhoff",
     "remoteStagingPath": "/tmp/occ",
     "remoteTargetPath": "/user/mbomhoff/occ",
+    "dbFilePath": "./occ-plan-b.sqlite3",
     "apps": {
         "libra-1.0": {
             "id": "libra-1.0",
