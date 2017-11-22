@@ -72,8 +72,8 @@ class Job {
         return remote_command('nohup sh ' + run_script + ' ' + this.id + ' ' + input_path + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' &')
     }
 
-    pushOutputs() {
-        var ds_output_path = '/iplant/home/' + config.remoteUsername + '/analyses/' + 'occ-' + this.id;
+    archive() {
+        var ds_output_path = '/iplant/home/' + config.remoteUsername + '/' + config.archivePath + '/' + 'job-' + this.id;
 
         return remote_command('iput -KTr ' + this.stagingPath + '/score' + ' ' + ds_output_path);
     }
@@ -171,7 +171,7 @@ class JobManager {
         .then( () => self.transitionJob(job, STATUS.RUNNING) )
         .then( () => { return job.runLibra() })
         .then( () => self.transitionJob(job, STATUS.ARCHIVING) )
-        .then( () => { return job.pushOutputs() })
+        .then( () => { return job.archive() })
         .then( () => self.transitionJob(job, STATUS.FINISHED) )
         .catch( error => {
             console.log('run:', error);
