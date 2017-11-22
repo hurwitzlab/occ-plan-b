@@ -37,8 +37,9 @@ module.exports = function(app, jobManager) {
         console.log('GET /jobs/v2');
 
         try {
-            var jobs = await jobManager.get();
+            var jobs = await jobManager.getJob();
             if (jobs) {
+                jobs = jobs.map( j => { j.inputs = arrayify(j.inputs); return j; } );
                 response.json({
                     status: "success",
                     result: jobs
@@ -64,8 +65,8 @@ module.exports = function(app, jobManager) {
         console.log('GET /jobs/v2/' + id);
 
         try {
-            var j = await jobManager.get(id);
-            if (!j) {
+            var job = await jobManager.getJob(id);
+            if (!job) {
                 response.json({
                     status: "error",
                     message: "Job " + id + " not found"
@@ -73,9 +74,10 @@ module.exports = function(app, jobManager) {
                 return;
             }
 
+            job.inputs = arrayify(job.inputs);
             response.json({
                 status: "success",
-                result: j
+                result: job
             });
         }
         catch (err) {
@@ -91,7 +93,7 @@ module.exports = function(app, jobManager) {
 
         try {
             var j = new job.Job(request.body);
-            await jobManager.submit(j);
+            await jobManager.submitJob(j);
 
             response.json({
                 status: "success",
@@ -108,17 +110,28 @@ module.exports = function(app, jobManager) {
         }
     });
 
-    app.get('/profiles/v2/me', function(request, response) {
-        console.log('GET /jobs/v2');
+//    app.get('/profiles/v2/me', function(request, response) {
+//        console.log('GET /jobs/v2');
+//
+//        response.json({
+//            status: "success",
+//            result: {
+//                email: "",
+//                first_name: "Matt",
+//                last_name: "Bomhoff",
+//                username: "mbomhoff"
+//            }
+//        });
+//    });
+}
 
-        response.json({
-            status: "success",
-            result: {
-                email: "",
-                first_name: "Matt",
-                last_name: "Bomhoff",
-                username: "mbomhoff"
-            }
-        });
+function arrayify(obj) {
+    var newObj = {};
+    Object.keys(obj).forEach(prop => {
+        if (Array.isArray(obj))
+            newObj[prop] = obj[prop];
+        else
+            newObj[prop] = [ obj[prop] ];
     });
+    return newObj;
 }
