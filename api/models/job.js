@@ -6,13 +6,13 @@ const shortid = require('shortid');
 const config = require('../../config.json');
 
 const STATUS = {
-    CREATED:         "CREATED",
-    STAGING_INPUTS:  "STAGING_INPUTS",
-    RUNNING:         "RUNNING",
-    PUSHING_OUTPUTS: "PUSHING_OUTPUTS",
-    FINISHED:        "FINISHED",
-    FAILED:          "FAILED",
-    STOPPED:         "STOPPED"
+    CREATED:         "CREATED",         // Created/queued
+    STAGING_INPUTS:  "STAGING_INPUTS",  // Transferring input files from IRODS to HDFS
+    RUNNING:         "RUNNING",         // Running on Hadoop
+    ARCHIVING:       "ARCHIVING",       // Transferring output files from HDFS to IRODS
+    FINISHED:        "FINISHED",        // All steps finished successfully
+    FAILED:          "FAILED",          // Non-zero return code from any step
+    STOPPED:         "STOPPED"          // Cancelled due to server restart
 }
 
 const MAX_JOBS_RUNNING = 1;
@@ -170,7 +170,7 @@ class JobManager {
         .then( () => { return job.stageInputs() })
         .then( () => self.transitionJob(job, STATUS.RUNNING) )
         .then( () => { return job.runLibra() })
-        .then( () => self.transitionJob(job, STATUS.PUSHING_OUTPUTS) )
+        .then( () => self.transitionJob(job, STATUS.ARCHIVING) )
         .then( () => { return job.pushOutputs() })
         .then( () => self.transitionJob(job, STATUS.FINISHED) )
         .catch( error => {
