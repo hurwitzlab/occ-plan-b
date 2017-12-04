@@ -43,6 +43,10 @@ class Job {
         if (this.inputs)
             Object.values(this.inputs).forEach( path => {
                 console.log('Job ' + this.id + ': staging input: ' + path);
+
+                if (path.startsWith('hsyn:///')) // file is already present via Syndicate mount // TODO find a way to indicate this in job definition
+                    return;
+
                 path = '/iplant/home' + path;
                 var base = pathlib.basename(path);
                 promises.push(
@@ -61,8 +65,13 @@ class Job {
         var RUN_MODE = this.parameters.RUN_MODE || "map";
         var WEIGHTING_ALG = this.parameters.WEIGHTING_ALG || "LOGALITHM";
 
+        var input_path;
+        if (this.inputs.IN_DIR.startsWith('hsyn:///')) // Syndicate mount
+            input_path = this.inputs.IN_DIR;
+        else
+            input_path = target_path + pathlib.basename(this.inputs.IN_DIR);
+
         var target_path = this.targetPath + '/data/';
-        var input_path = target_path + pathlib.basename(this.inputs.IN_DIR);
         var run_script = config.remoteStagingPath + '/run_libra.sh';
 
         // Copy job execution script to remote system
