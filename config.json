@@ -12,7 +12,7 @@
             "name": "libra-1.0",
             "version": "1.0",
             "shortDescription": "Compute Similarity between Large Metagenomic Samples",
-            "helpURI": "",
+            "helpURI": "https://github.com/iychoi/libra",
             "inputs": [
                 {
                     "id": "IN_DIR",
