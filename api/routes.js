@@ -11,9 +11,9 @@ module.exports = function(app, jobManager) {
     app.use(bodyParser.json()); // support json encoded bodies
     app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
 
-    app.get('/apps/v2/:id(\\S+)', function(request, response) {
+    app.get('/apps/:id(\\S+)', function(request, response) {
         var id = request.params.id;
-        console.log('GET /apps/v2/' + id);
+        console.log('GET /apps' + id);
 
         var apps = config.apps;
         if (typeof apps[id] === 'undefined') {
@@ -30,8 +30,8 @@ module.exports = function(app, jobManager) {
         });
     });
 
-    app.get('/jobs/v2', async (request, response) => {
-        console.log('GET /jobs/v2');
+    app.get('/jobs', async (request, response) => {
+        console.log('GET /jobs');
 
         try {
             var jobs = await jobManager.getJob();
@@ -57,9 +57,9 @@ module.exports = function(app, jobManager) {
         }
     });
 
-    app.get('/jobs/v2/:id(\\S+)', async (request, response) => {
+    app.get('/jobs/:id(\\S+)', async (request, response) => {
         var id = request.params.id;
-        console.log('GET /jobs/v2/' + id);
+        console.log('GET /jobs' + id);
 
         try {
             var job = await jobManager.getJob(id);
@@ -85,8 +85,8 @@ module.exports = function(app, jobManager) {
         }
     });
 
-    app.post('/jobs/v2', async (request, response) => {
-        console.log("POST /jobs/v2\n", request.body);
+    app.post('/jobs', async (request, response) => {
+        console.log("POST /jobs\n", request.body);
 
         try {
             var j = new job.Job(request.body);
