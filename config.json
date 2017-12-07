@@ -26,7 +26,8 @@
                         "default": ""
                     },
                     "semantics": {
-                        "fileTypes": [ "fasta" ]
+                        "fileTypes": [ "fasta" ],
+                        "ontology": [ "syndicate" ]
                     }
                 }
             ],

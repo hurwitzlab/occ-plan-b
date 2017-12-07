@@ -26,21 +26,21 @@ hadoop jar $LIBRA_DIR/dist/libra-all.jar core \
 -m $RUN_MODE \
 -w $WEIGHTING_ALG \
 -t $NUM_TASKS \
--o $OUT_DIR/$JOB_ID/score/$WEIGHTING_ALG \
+-o $OUT_DIR/$JOB_ID/score \
 $OUT_DIR/$JOB_ID/index 2>&1 >> $LOG_FILE
 
 # Get result
-hdfs dfs -get $OUT_DIR/$JOB_ID/score $TMP_DIR/$JOB_ID
+hdfs dfs -get $OUT_DIR/$JOB_ID/score $TMP_DIR/$JOB_ID/score
 
 # Convert to distance & similarity matrices
 python $LIBRA_DIR/tools/gen_score_matrix.py \
-$TMP_DIR/$JOB_ID/score/$WEIGHTING_ALG/result.score \
-$TMP_DIR/$JOB_ID/score/$WEIGHTING_ALG/file_mapping_table.json \
-$TMP_DIR/$JOB_ID/score/$WEIGHTING_ALG/similarity.matrix similarity
+$TMP_DIR/$JOB_ID/score/result.score \
+$TMP_DIR/$JOB_ID/score/file_mapping_table.json \
+$TMP_DIR/$JOB_ID/score/similarity.matrix similarity
 
 python $LIBRA_DIR/tools/gen_score_matrix.py \
-$TMP_DIR/$JOB_ID/score/$WEIGHTING_ALG/result.score \
-$TMP_DIR/$JOB_ID/score/$WEIGHTING_ALG/file_mapping_table.json \
-$TMP_DIR/$JOB_ID/score/$WEIGHTING_ALG/distance.matrix distance
+$TMP_DIR/$JOB_ID/score/result.score \
+$TMP_DIR/$JOB_ID/score/file_mapping_table.json \
+$TMP_DIR/$JOB_ID/score/distance.matrix distance
 
 touch $DONE_FILE

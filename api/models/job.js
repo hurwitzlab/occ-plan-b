@@ -65,20 +65,18 @@ class Job {
         var RUN_MODE = this.parameters.RUN_MODE || "map";
         var WEIGHTING_ALG = this.parameters.WEIGHTING_ALG || "LOGALITHM";
 
+        var target_path = this.targetPath + '/data/';
         var input_path;
         if (this.inputs.IN_DIR.startsWith('hsyn:///')) // Syndicate mount
             input_path = this.inputs.IN_DIR;
-        else
+        else // Staged data from Data Store
             input_path = target_path + pathlib.basename(this.inputs.IN_DIR);
-
-        var target_path = this.targetPath + '/data/';
-        var run_script = config.remoteStagingPath + '/run_libra.sh';
 
         // Copy job execution script to remote system
         remote_copy('./run_libra.sh');
 
-        // FIXME is 'nohup' necessary?  And '&' isn't working
-        return remote_command('nohup sh ' + run_script + ' ' + this.id + ' ' + input_path + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' &')
+        var run_script = config.remoteStagingPath + '/run_libra.sh';
+        return remote_command('sh ' + run_script + ' ' + this.id + ' ' + input_path + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG);
     }
 
     archive() {
@@ -167,7 +165,7 @@ class JobManager {
     async transitionJob(job, newStatus) {
         console.log('Job.transition: job ' + job.id + ' from ' + job.status + ' to ' + newStatus);
         job.setStatus(newStatus);
-        await this.db.updateJob(job.id, job.status);
+        await this.db.updateJob(job.id, job.status, (newStatus == STATUS.FINISHED));
     }
 
     runJob(job) {
@@ -183,8 +181,8 @@ class JobManager {
         .then( () => { return job.archive() })
         .then( () => self.transitionJob(job, STATUS.FINISHED) )
         .catch( error => {
-            console.log('run:', error);
-            this.status = STATUS.FAILED;
+            console.log('runJob ERROR:', error);
+            self.transitionJob(job, STATUS.FAILED);
         });
     }
 
@@ -226,14 +224,18 @@ function remote_command(cmd_str) {
     console.log("Executing remote command: " + remoteCmdStr);
 
     return new Promise(function(resolve, reject) {
-        const child = execFile('ssh', [ config.remoteUsername + '@' + config.remoteHost, cmd_str ],
+        const child = execFile(
+            'ssh', [ config.remoteUsername + '@' + config.remoteHost, cmd_str ],
+            { maxBuffer: 10 * 1024 * 1024 }, // 10mb -- was overrunning with default 200kb
             (error, stdout, stderr) => {
+                console.log('remote_command:stdout:', stdout);
+                console.log('remote_command:stderr:', stderr);
+
                 if (error) {
-                    console.error('remote_command:stderr:', stderr);
-                    reject();
+                    console.error(error);
+                    reject(error);
                 }
                 else {
-                    console.log('remote_command:stdout:', stdout);
                     resolve();
                 }
             }
