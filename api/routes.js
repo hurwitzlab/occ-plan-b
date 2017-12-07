@@ -6,9 +6,6 @@ const bodyParser = require('body-parser');
 const config = require('../config.json');
 
 
-// Initialize job queue
-//var jobManager = new job.JobManager();
-
 module.exports = function(app, jobManager) {
     app.use(cors());
     app.use(bodyParser.json()); // support json encoded bodies
@@ -109,20 +106,6 @@ module.exports = function(app, jobManager) {
             });
         }
     });
-
-//    app.get('/profiles/v2/me', function(request, response) {
-//        console.log('GET /jobs/v2');
-//
-//        response.json({
-//            status: "success",
-//            result: {
-//                email: "",
-//                first_name: "Matt",
-//                last_name: "Bomhoff",
-//                username: "mbomhoff"
-//            }
-//        });
-//    });
 }
 
 function arrayify(obj) {
