@@ -13,7 +13,7 @@ module.exports = function(app, jobManager) {
 
     app.get('/apps/:id(\\S+)', function(request, response) {
         var id = request.params.id;
-        console.log('GET /apps' + id);
+        console.log('GET /apps/' + id);
 
         var apps = config.apps;
         if (typeof apps[id] === 'undefined') {
@@ -59,7 +59,7 @@ module.exports = function(app, jobManager) {
 
     app.get('/jobs/:id(\\S+)', async (request, response) => {
         var id = request.params.id;
-        console.log('GET /jobs' + id);
+        console.log('GET /jobs/' + id);
 
         try {
             var job = await jobManager.getJob(id);
