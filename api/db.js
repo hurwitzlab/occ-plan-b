@@ -1,5 +1,6 @@
 const sqlite = require('sqlite');
 const Promise = require('bluebird');
+const dateFormat = require('dateformat');
 
 class Database {
     constructor() {}
@@ -26,17 +27,23 @@ class Database {
     }
 
     addJob(job_id, app_id, name, status, inputs, parameters) {
-        var timestamp = new Date().toLocaleString();
-        return sqlite.run("INSERT INTO jobs (job_id, app_id, name, status, inputs, parameters, start_time) VALUES (?,?,?,?,?,?,?)", [job_id, app_id, name, status, inputs, parameters, timestamp]);
+        var start_time = getTimestamp();
+        return sqlite.run("INSERT INTO jobs (job_id, app_id, name, status, inputs, parameters, start_time) VALUES (?,?,?,?,?,?,?)", [job_id, app_id, name, status, inputs, parameters, start_time]);
     }
 
-    updateJob(job_id, status) {
-        return sqlite.run("UPDATE jobs SET status=? WHERE job_id=?", [status, job_id]);
+    updateJob(job_id, status, isEnded) {
+        var end_time = ( isEnded ? getTimestamp() : null );
+        return sqlite.run("UPDATE jobs SET status=?, end_time=? WHERE job_id=?", [status, end_time, job_id]);
     }
 
     stopJobs() {
         return sqlite.run("UPDATE jobs SET status='STOPPED' WHERE status NOT IN ('STOPPED', 'FINISHED', 'FAILED')");
     }
+}
+
+function getTimestamp() {
+    var now = new Date();
+    return dateFormat(now, "yyyy-mm-dd") + "T" + dateFormat(now, "HH:MM:ss.lo"); // dateFormat(now, "isoDateTime");
 }
 
 exports.Database = Database;
