@@ -19,8 +19,8 @@ const MAX_JOBS_RUNNING = 1;
 
 class Job {
     constructor(props) {
-        this.username = props.username; // CyVerse username of user running the job
         this.id = props.id || 'planb-' + shortid.generate();
+        this.username = props.username; // CyVerse username of user running the job
         this.name = props.name;
         this.appId = props.appId;
         this.startTime = props.startTime;
@@ -142,6 +142,7 @@ class JobManager {
     createJob(job) {
         return new Job({
             id: job.job_id,
+            username: job.username,
             appId: job.app_id,
             name: job.name,
             status: job.status,
@@ -160,7 +161,7 @@ class JobManager {
             return;
         }
 
-        return this.db.addJob(job.id, job.appId, job.name, job.status, JSON.stringify(job.inputs), JSON.stringify(job.parameters));
+        return this.db.addJob(job.id, job.username, job.appId, job.name, job.status, JSON.stringify(job.inputs), JSON.stringify(job.parameters));
     }
 
     async transitionJob(job, newStatus) {
