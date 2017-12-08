@@ -18,7 +18,7 @@
                     "id": "IN_DIR",
                     "details": {
                         "label": "Directory of input FASTA files",
-                        "description": ""
+                        "description": "Please note: the Cart cannot be used as this field requires a single directory name and not a list of files."
                     },
                     "value": {
                         "order": 0,
