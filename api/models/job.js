@@ -21,6 +21,7 @@ class Job {
     constructor(props) {
         this.id = props.id || 'planb-' + shortid.generate();
         this.username = props.username; // CyVerse username of user running the job
+        this.token = props.token;
         this.name = props.name;
         this.appId = props.appId;
         this.startTime = props.startTime;
@@ -41,20 +42,21 @@ class Job {
         var staging_path = this.stagingPath + '/data/';
 
         var promises = [];
-        if (this.inputs)
+        if (this.inputs) {
             Object.values(this.inputs).forEach( path => {
                 console.log('Job ' + this.id + ': staging input: ' + path);
 
                 if (path.startsWith('hsyn:///')) // file is already present via Syndicate mount // TODO find a way to indicate this in job definition
                     return;
 
-                path = '/iplant/home' + path;
-                var base = pathlib.basename(path);
+                //path = '/iplant/home' + path;
                 promises.push(
-                    remote_command('iget -frTK ' + base + ' ' + staging_path)
+                    //remote_command('iget -frTK ' + path + ' ' + staging_path);
+                    remote_command('curl -k -H "Authorization: Bearer ' + self.token + '" -o ' + staging_path + ' "https://agave.iplantc.org/files/v2/media/"' + path)
                     .then( () => { return remote_command('hdfs dfs -put ' + staging_path + ' ' + self.targetPath) } )
                 );
             });
+        }
 
         return Promise.all(promises);
     }
@@ -119,23 +121,33 @@ class JobManager {
         }
     }
 
-    async getJob(id) {
+    async getJob(id, username) {
         var self = this;
 
-        if (typeof id == 'undefined') {
-            const jobs = await this.db.getJobs()
-            return jobs.map( job => { return self.createJob(job) } );
-        }
-        else {
-            const job = await this.db.getJob(id);
-            return self.createJob(job);
-        }
+        const job = await this.db.getJob(id);
+
+        if (!job || (username && job.username != username))
+            return;
+
+        return self.createJob(job);
+    }
+
+    async getJobs(username) {
+        var jobs;
+
+        if (username)
+            jobs = await this.db.getJobsForUser(username);
+        else
+            jobs = await this.db.getJobs();
+
+        return jobs.map( job => { return self.createJob(job) } );
     }
 
     async getActiveJobs() {
         var self = this;
 
         const jobs = await this.db.getActiveJobs();
+
         return jobs.map( job => { return self.createJob(job) } );
     }
 

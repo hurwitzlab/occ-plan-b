@@ -22,12 +22,15 @@ class Database {
         return sqlite.all("SELECT job_id, username, app_id, name, status, inputs, parameters, start_time, end_time FROM jobs");
     }
 
+    getJobsForUser(username) {
+        return sqlite.all("SELECT job_id, username, app_id, name, status, inputs, parameters, start_time, end_time FROM jobs WHERE username=?", username);
+    }
+
     getActiveJobs() {
         return sqlite.all("SELECT job_id, username, app_id, name, status, inputs, parameters, start_time, end_time FROM jobs WHERE status NOT IN ('STOPPED', 'FINISHED', 'FAILED')");
     }
 
     addJob(job_id, username, app_id, name, status, inputs, parameters) {
-        console.log("addJob:", job_id, username, app_id, name);
         var start_time = getTimestamp();
         return sqlite.run("INSERT INTO jobs (job_id, username, app_id, name, status, inputs, parameters, start_time) VALUES (?,?,?,?,?,?,?,?)", [job_id, username, app_id, name, status, inputs, parameters, start_time]);
     }
