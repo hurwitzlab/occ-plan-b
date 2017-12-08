@@ -18,8 +18,8 @@ const STATUS = {
 const MAX_JOBS_RUNNING = 1;
 
 class Job {
-    constructor(username, props) {
-        this.username = username; // CyVerse username of user running the job
+    constructor(props) {
+        this.username = props.username; // CyVerse username of user running the job
         this.id = props.id || 'planb-' + shortid.generate();
         this.name = props.name;
         this.appId = props.appId;
