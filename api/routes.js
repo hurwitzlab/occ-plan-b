@@ -87,9 +87,11 @@ module.exports = function(app, jobManager) {
 
     app.post('/jobs', async (request, response) => {
         console.log("POST /jobs\n", request.body);
+        var username = request.query.username; // FIXME determine username from token in the future
+        console.log("username=", username);
 
         try {
-            var j = new job.Job(request.body);
+            var j = new job.Job(username, request.body);
             await jobManager.submitJob(j);
 
             response.json({

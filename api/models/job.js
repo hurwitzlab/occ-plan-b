@@ -18,7 +18,8 @@ const STATUS = {
 const MAX_JOBS_RUNNING = 1;
 
 class Job {
-    constructor(props) {
+    constructor(username, props) {
+        this.username = username; // CyVerse username of user running the job
         this.id = props.id || 'planb-' + shortid.generate();
         this.name = props.name;
         this.appId = props.appId;
@@ -80,7 +81,7 @@ class Job {
     }
 
     archive() {
-        var ds_output_path = '/iplant/home/' + config.remoteUsername + '/' + config.archivePath + '/' + 'job-' + this.id;
+        var ds_output_path = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
 
         return remote_command('iput -KTr ' + this.stagingPath + '/score' + ' ' + ds_output_path);
     }
