@@ -52,7 +52,7 @@ class Job {
                 //path = '/iplant/home' + path;
                 promises.push(
                     //remote_command('iget -frTK ' + path + ' ' + staging_path);
-                    remote_command('curl -k -H "Authorization: Bearer ' + self.token + '" -o ' + staging_path + ' "https://agave.iplantc.org/files/v2/media/"' + path)
+                    remote_get_directory(self.token, path, staging_path)
                     .then( () => { return remote_command('hdfs dfs -put ' + staging_path + ' ' + self.targetPath) } )
                 );
             });
@@ -73,7 +73,7 @@ class Job {
         if (this.inputs.IN_DIR.startsWith('hsyn:///')) // Syndicate mount
             input_path = this.inputs.IN_DIR;
         else // Staged data from Data Store
-            input_path = target_path + pathlib.basename(this.inputs.IN_DIR);
+            input_path = target_path;// + pathlib.basename(this.inputs.IN_DIR);
 
         // Copy job execution script to remote system
         remote_copy('./run_libra.sh');
@@ -83,9 +83,11 @@ class Job {
     }
 
     archive() {
-        var ds_output_path = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
+        //var ds_output_path = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
+        //return remote_command('iput -KTr ' + this.stagingPath + '/score' + ' ' + ds_output_path);
 
-        return remote_command('iput -KTr ' + this.stagingPath + '/score' + ' ' + ds_output_path);
+        var ds_output_path = '/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
+        return remote_put_directory(this.token, this.stagingPath + '/score', ds_output_path);
     }
 }
 
@@ -155,6 +157,7 @@ class JobManager {
         return new Job({
             id: job.job_id,
             username: job.username,
+            token: job.token,
             appId: job.app_id,
             name: job.name,
             status: job.status,
@@ -173,7 +176,7 @@ class JobManager {
             return;
         }
 
-        return this.db.addJob(job.id, job.username, job.appId, job.name, job.status, JSON.stringify(job.inputs), JSON.stringify(job.parameters));
+        return this.db.addJob(job.id, job.username, job.token, job.appId, job.name, job.status, JSON.stringify(job.inputs), JSON.stringify(job.parameters));
     }
 
     async transitionJob(job, newStatus) {
@@ -250,7 +253,7 @@ function remote_command(cmd_str) {
                     reject(error);
                 }
                 else {
-                    resolve();
+                    resolve(stdout);
                 }
             }
         );
@@ -264,6 +267,57 @@ function remote_copy(local_file) {
     const cmd = spawn('scp', [ local_file, config.remoteHost + ':' + config.remoteStagingPath ]);
     console.log( `stderr: ${cmd.stderr.toString()}` );
     console.log( `stdout: ${cmd.stdout.toString()}` );
+}
+
+function remote_get_file(token, src_path, dest_path) {
+    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -o ' + dest_path + ' ' + config.agaveFilesUrl + 'media' + src_path);
+}
+
+function remote_get_directory(token, src_path, dest_path) {
+    //var actualToken = token.substring(token.indexOf('"'));
+    //return remote_command('cd ' + dest_path + ' && files-get -f -r -z ' + actualToken + ' ' + src_path);
+
+    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" ' + config.agaveFilesUrl + 'listings/' + src_path)
+        .then(data => {
+            var response = JSON.parse(data);
+            var promises = [];
+
+            response.result.forEach( file => {
+                if (file.name != '.')
+                    promises.push( remote_get_file(token, file.path, dest_path + '/' + file.name) );
+            });
+
+            return Promise.all(promises);
+        });
+}
+
+function remote_put_directory(token, src_path, dest_path) {
+    return remote_make_directory(token, dest_path)
+        .then( () => { return remote_command('ls -d -1 ' + src_path + '/*.*') } )
+        .then( ls => {
+            var promises = [];
+
+            ls.split("\n").forEach( file => {
+                if (file) {
+                    promises.push( remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -F "fileToUpload=@' + file + '" ' + config.agaveFilesUrl + 'media/' + dest_path) );
+                }
+            });
+
+            return Promise.all(promises);
+        });
+}
+
+function remote_make_directory(token, dest_path) {
+    var path = pathlib.parse(dest_path);
+    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X PUT -d "action=mkdir&path=' + path.base + '" ' + config.agaveFilesUrl + 'media/' + path.dir);
+}
+
+function escape(str) {
+    str.replace(/\\/g, "\\\\")
+       .replace(/\$/g, "\\$")
+       .replace(/'/g, "\\'")
+       .replace(/"/g, "\\\"");
+    return str;
 }
 
 exports.Job = Job;
