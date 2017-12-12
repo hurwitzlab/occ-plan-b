@@ -37,7 +37,7 @@ module.exports = function(app, jobManager) {
         try {
             validateAgaveToken(request)
             .then( async profile => {
-                var jobs = await jobManager.getJob(null, profile.username);
+                var jobs = await jobManager.getJobs(profile.username);
                 if (jobs) {
                     jobs = jobs.map( j => { j.inputs = arrayify(j.inputs); return j; } );
                     response.json({

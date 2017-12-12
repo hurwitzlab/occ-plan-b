@@ -135,6 +135,7 @@ class JobManager {
     }
 
     async getJobs(username) {
+        var self = this;
         var jobs;
 
         if (username)
