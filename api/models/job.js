@@ -1,4 +1,5 @@
 const dblib = require('../db.js');
+const Promise = require('bluebird');
 const spawn = require('child_process').spawnSync;
 const execFile = require('child_process').execFile;
 const pathlib = require('path');
@@ -49,9 +50,7 @@ class Job {
                 if (path.startsWith('hsyn:///')) // file is already present via Syndicate mount // TODO find a way to indicate this in job definition
                     return;
 
-                //path = '/iplant/home' + path;
                 promises.push(
-                    //remote_command('iget -frTK ' + path + ' ' + staging_path);
                     remote_get_directory(self.token, path, staging_path)
                     .then( () => { return remote_command('hdfs dfs -put ' + staging_path + ' ' + self.targetPath) } )
                 );
@@ -275,36 +274,32 @@ function remote_get_file(token, src_path, dest_path) {
 }
 
 function remote_get_directory(token, src_path, dest_path) {
-    //var actualToken = token.substring(token.indexOf('"'));
-    //return remote_command('cd ' + dest_path + ' && files-get -f -r -z ' + actualToken + ' ' + src_path);
-
     return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" ' + config.agaveFilesUrl + 'listings/' + src_path)
         .then(data => {
             var response = JSON.parse(data);
-            var promises = [];
-
-            response.result.forEach( file => {
-                if (file.name != '.')
-                    promises.push( remote_get_file(token, file.path, dest_path + '/' + file.name) );
-            });
-
-            return Promise.all(promises);
+            return response.result;
+        })
+        .each(file => { // transfer one file at a time to avoid "ssh_exchange_identification" error
+            if (file.name != '.') {
+                return remote_get_file(token, file.path, dest_path + '/' + file.name);
+            }
         });
+}
+
+function remote_put_file(token, src_path, dest_path) {
+    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -F "fileToUpload=@' + src_path + '" ' + config.agaveFilesUrl + 'media/' + dest_path)
 }
 
 function remote_put_directory(token, src_path, dest_path) {
     return remote_make_directory(token, dest_path)
         .then( () => { return remote_command('ls -d -1 ' + src_path + '/*.*') } )
         .then( ls => {
-            var promises = [];
-
-            ls.split("\n").forEach( file => {
-                if (file) {
-                    promises.push( remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -F "fileToUpload=@' + file + '" ' + config.agaveFilesUrl + 'media/' + dest_path) );
-                }
-            });
-
-            return Promise.all(promises);
+            return ls.split("\n");
+        })
+        .each(file => { // transfer one file at a time to avoid "ssh_exchange_identification" error
+            if (file) {
+                return remote_put_file(token, file, dest_path);
+            }
         });
 }
 
