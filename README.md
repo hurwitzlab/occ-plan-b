@@ -8,6 +8,9 @@ Setup database:
 cat occ-plan-b.sql | sqlite3 occ-plan-b.sqlite3
 ```
 
+Modify configuration:
+See config.json.  Make sure SSH public key is installed on target Hadoop server.
+
 To try out:
 ```
 npm install
@@ -23,6 +26,6 @@ nodemon server.js
 For production:
 ```
 sudo npm install pm2@latest -g
-pm2 start --name server.js
+pm2 start --name occ-plan-b server.js
 sudo pm2 startup systemd
 ```
