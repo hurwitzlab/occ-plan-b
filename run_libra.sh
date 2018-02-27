@@ -5,29 +5,36 @@ NUM_TASKS=$4
 FILTER_ALG=$5
 RUN_MODE=$6
 WEIGHTING_ALG=$7
+SCORING_ALG=$8
 
 MEM=32768M
 TMP_DIR=/tmp/occ
-LOG_FILE=$TMP_DIR/occ.log
 DONE_FILE=$TMP_DIR/$JOB_ID.done
 OUT_DIR=/user/mbomhoff/occ
 LIBRA_DIR=/home/mbomhoff/repos/libra
 
 # Index
-hadoop jar $LIBRA_DIR/dist/libra-all.jar -D mapred.child.java.opts=-Xmx$MEM preprocess \
--k $3 \
--t $4 \
--f $5 \
+LIBRA_CMD="hadoop jar $LIBRA_DIR/dist/libra-all.jar -D mapred.child.java.opts=-Xmx$MEM preprocess \
+-k $KMER_SIZE \
+-t $NUM_TASKS \
+-f $FILTER_ALG \
 -o $OUT_DIR/$JOB_ID/index \
-$IN_DIR 2>&1 >> $LOG_FILE
+$IN_DIR"
+
+echo $LIBRA_CMD
+eval $LIBRA_CMD
 
 # Analyze
-hadoop jar $LIBRA_DIR/dist/libra-all.jar core \
+LIBRA_CMD="hadoop jar $LIBRA_DIR/dist/libra-all.jar distancematrix \
 -m $RUN_MODE \
 -w $WEIGHTING_ALG \
+-s $SCORING_ALG \
 -t $NUM_TASKS \
 -o $OUT_DIR/$JOB_ID/score \
-$OUT_DIR/$JOB_ID/index 2>&1 >> $LOG_FILE
+$OUT_DIR/$JOB_ID/index"
+
+echo $LIBRA_CMD
+eval $LIBRA_CMD
 
 # Get result
 hdfs dfs -get $OUT_DIR/$JOB_ID/score $TMP_DIR/$JOB_ID/score

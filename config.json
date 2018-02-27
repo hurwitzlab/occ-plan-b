@@ -122,6 +122,26 @@
                             { "NATURAL": "Natural logarithm" }
                         ]
                     }
+                },
+                {
+                    "id": "SCORING_ALG",
+                    "details": {
+                        "label": "Scoring algorithm",
+                        "description": "",
+                        "argument": "-s",
+                        "showArgument": true
+                    },
+                    "value": {
+                        "order": 4,
+                        "type": "enumeration",
+                        "required": false,
+                        "default": "COSINESIMILARITY",
+                        "enum_values": [
+                            { "COSINESIMILARITY": "Cosine Similarity" },
+                            { "BRAYCURTIS": "Bray-Curtis" },
+                            { "JENSENSHANNON": "Jensen-Shannon (experimental)" }
+                        ]
+                    }
                 }
             ]
         }

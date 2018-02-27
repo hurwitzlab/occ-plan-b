@@ -61,11 +61,13 @@ class Job {
     }
 
     runLibra() {
+        //FIXME use defaults in app definition
         var KMER_SIZE = this.parameters.KMER_SIZE || 20;
         var FILTER_ALG = this.parameters.FILTER_ALG || "NOTUNIQUE";
         var NUM_TASKS = this.parameters.NUM_TASKS || 1;
         var RUN_MODE = this.parameters.RUN_MODE || "map";
         var WEIGHTING_ALG = this.parameters.WEIGHTING_ALG || "LOGALITHM";
+        var SCORING_ALG = this.parameters.SCORING_ALG || "COSINESIMILARITY";
 
         var target_path = this.targetPath + '/data/';
         var input_path;
@@ -78,7 +80,7 @@ class Job {
         remote_copy('./run_libra.sh');
 
         var run_script = config.remoteStagingPath + '/run_libra.sh';
-        return remote_command('sh ' + run_script + ' ' + this.id + ' ' + input_path + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG);
+        return remote_command('sh ' + run_script + ' ' + this.id + ' ' + input_path + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' ' + SCORING_ALG);
     }
 
     archive() {
