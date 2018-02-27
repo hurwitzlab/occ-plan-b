@@ -283,9 +283,20 @@ function remote_get_directory(token, src_path, dest_path) {
         })
         .each(file => { // transfer one file at a time to avoid "ssh_exchange_identification" error
             if (file.name != '.') {
-                return remote_get_file(token, file.path, dest_path + '/' + file.name);
+                return remote_get_file(token, file.path, dest_path + '/' + file.name)
+                    .then(() => {
+                        if (file.name.endsWith('.gz') || file.name.endsWith('.gzip')) {
+                            return remote_gzip_to_bzip2(dest_path + '/' + file.name);
+                        }
+                    });
             }
         });
+}
+
+function remote_gzip_to_bzip2(src_path) {
+    var path = pathlib.parse(src_path);
+    var dest_path = path.dir + '/' + path.name + '.bz2';
+    return remote_command('gunzip --stdout ' + src_path + ' | bzip2 > ' + dest_path + ' && rm ' + src_path);
 }
 
 function remote_put_file(token, src_path, dest_path) {
