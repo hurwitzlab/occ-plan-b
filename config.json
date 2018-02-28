@@ -60,7 +60,7 @@
                         "order": 1,
                         "type": "number",
                         "required": false,
-                        "default": "1"
+                        "default": "30"
                     }
                 },
                 {
