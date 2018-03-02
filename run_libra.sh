@@ -1,3 +1,5 @@
+echo "Started Libra" `date`
+
 JOB_ID=$1
 IN_DIR=$2
 KMER_SIZE=$3
@@ -51,3 +53,5 @@ $TMP_DIR/$JOB_ID/score/file_mapping_table.json \
 $TMP_DIR/$JOB_ID/score/distance.matrix distance
 
 touch $DONE_FILE
+
+echo "Finished Libra" `date`

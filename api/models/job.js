@@ -80,7 +80,8 @@ class Job {
         remote_copy('./run_libra.sh');
 
         var run_script = config.remoteStagingPath + '/run_libra.sh';
-        return remote_command('sh ' + run_script + ' ' + this.id + ' ' + input_path + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' ' + SCORING_ALG);
+        var log_file = config.remoteStagingPath + '/libra.log';
+        return remote_command('sh ' + run_script + ' ' + this.id + ' ' + input_path + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' ' + SCORING_ALG + ' >> ' + log_file + ' 2>&1');
     }
 
     archive() {
@@ -285,6 +286,7 @@ function remote_get_directory(token, src_path, dest_path) {
             if (file.name != '.') {
                 return remote_get_file(token, file.path, dest_path + '/' + file.name)
                     .then(() => {
+                        // TODO: move gzip to bzip2 conversion to run_libra.sh ...?
                         if (file.name.endsWith('.gz') || file.name.endsWith('.gzip')) {
                             return remote_gzip_to_bzip2(dest_path + '/' + file.name);
                         }
