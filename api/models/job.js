@@ -16,7 +16,7 @@ const STATUS = {
     STOPPED:         "STOPPED"          // Cancelled due to server restart
 }
 
-const MAX_JOBS_RUNNING = 1;
+const MAX_JOBS_RUNNING = 2;
 
 class Job {
     constructor(props) {
@@ -41,6 +41,13 @@ class Job {
     stageInputs() {
         var self = this;
         var staging_path = this.stagingPath + '/data/';
+        var target_path = this.targetPath + '/data';
+
+        // Copy data staging script to remote system
+        remote_copy('./scripts/stage_data.sh');
+
+        var stage_script = config.remoteStagingPath + '/stage_data.sh';
+        var log_file = config.remoteStagingPath + '/libra.log';
 
         var promises = [];
         if (this.inputs) {
@@ -50,10 +57,15 @@ class Job {
                 if (path.startsWith('hsyn:///')) // file is already present via Syndicate mount // TODO find a way to indicate this in job definition
                     return;
 
-                promises.push(
-                    remote_get_directory(self.token, path, staging_path)
-                    .then( () => { return remote_command('hdfs dfs -put ' + staging_path + ' ' + self.targetPath) } )
-                );
+//                promises.push(
+//                    remote_get_directory(self.token, path, staging_path)
+//                    .then( () => { return remote_command('hdfs dfs -put ' + staging_path + ' ' + self.targetPath) } )
+//                );
+
+                  path = '/iplant/home' + path;
+                  promises.push(
+                      remote_command('sh ' + stage_script + ' ' + path + ' ' + this.id + ' ' + staging_path + ' ' + target_path + ' >> ' + log_file + ' 2>&1')
+                  );
             });
         }
 
@@ -77,7 +89,7 @@ class Job {
             input_path = target_path;// + pathlib.basename(this.inputs.IN_DIR);
 
         // Copy job execution script to remote system
-        remote_copy('./run_libra.sh');
+        remote_copy('./scripts/run_libra.sh');
 
         var run_script = config.remoteStagingPath + '/run_libra.sh';
         var log_file = config.remoteStagingPath + '/libra.log';
@@ -272,34 +284,34 @@ function remote_copy(local_file) {
     console.log( `stdout: ${cmd.stdout.toString()}` );
 }
 
-function remote_get_file(token, src_path, dest_path) {
-    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -o ' + dest_path + ' ' + config.agaveFilesUrl + 'media' + src_path);
-}
-
-function remote_get_directory(token, src_path, dest_path) {
-    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" ' + config.agaveFilesUrl + 'listings/' + src_path)
-        .then(data => {
-            var response = JSON.parse(data);
-            return response.result;
-        })
-        .each(file => { // transfer one file at a time to avoid "ssh_exchange_identification" error
-            if (file.name != '.') {
-                return remote_get_file(token, file.path, dest_path + '/' + file.name)
-                    .then(() => {
-                        // TODO: move gzip to bzip2 conversion to run_libra.sh ...?
-                        if (file.name.endsWith('.gz') || file.name.endsWith('.gzip')) {
-                            return remote_gzip_to_bzip2(dest_path + '/' + file.name);
-                        }
-                    });
-            }
-        });
-}
-
-function remote_gzip_to_bzip2(src_path) {
-    var path = pathlib.parse(src_path);
-    var dest_path = path.dir + '/' + path.name + '.bz2';
-    return remote_command('gunzip --stdout ' + src_path + ' | bzip2 > ' + dest_path + ' && rm ' + src_path);
-}
+//function remote_get_file(token, src_path, dest_path) {
+//    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -o ' + dest_path + ' ' + config.agaveFilesUrl + 'media' + src_path);
+//}
+//
+//function remote_get_directory(token, src_path, dest_path) {
+//    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" ' + config.agaveFilesUrl + 'listings/' + src_path)
+//        .then(data => {
+//            var response = JSON.parse(data);
+//            return response.result;
+//        })
+//        .each(file => { // transfer one file at a time to avoid "ssh_exchange_identification" error
+//            if (file.name != '.') {
+//                return remote_get_file(token, file.path, dest_path + '/' + file.name)
+//                    .then(() => {
+//                        // TODO: move gzip to bzip2 conversion to run_libra.sh ...?
+//                        if (file.name.endsWith('.gz') || file.name.endsWith('.gzip')) {
+//                            return remote_gzip_to_bzip2(dest_path + '/' + file.name);
+//                        }
+//                    });
+//            }
+//        });
+//}
+//
+//function remote_gzip_to_bzip2(src_path) {
+//    var path = pathlib.parse(src_path);
+//    var dest_path = path.dir + '/' + path.name + '.bz2';
+//    return remote_command('gunzip --stdout ' + src_path + ' | bzip2 > ' + dest_path + ' && rm ' + src_path);
+//}
 
 function remote_put_file(token, src_path, dest_path) {
     return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -F "fileToUpload=@' + src_path + '" ' + config.agaveFilesUrl + 'media/' + dest_path)
