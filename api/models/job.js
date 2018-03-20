@@ -97,11 +97,11 @@ class Job {
     }
 
     archive() {
-        //var ds_output_path = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
-        //return remote_command('iput -KTr ' + this.stagingPath + '/score' + ' ' + ds_output_path);
+        var ds_output_path = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
+        return remote_command('iput -KTr ' + this.stagingPath + ' ' + ds_output_path);
 
-        var ds_output_path = '/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
-        return remote_put_directory(this.token, this.stagingPath + '/score', ds_output_path);
+//        var ds_output_path = '/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
+//        return remote_put_directory(this.token, this.stagingPath + '/score', ds_output_path);
     }
 }
 
