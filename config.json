@@ -12,7 +12,7 @@
             "id": "libra-1.0",
             "name": "libra-1.0",
             "version": "1.0",
-            "shortDescription": "Compute Similarity between Large Metagenomic Samples",
+            "shortDescription": "Compute similarity between large metagenomic samples. Important: share your Data Store input folder (with 'read' access) and /archive/jobs folder (with 'write' access) with the user 'imicrobe'. This is a temporary workaround to allow input and output files to be transferred.",
             "helpURI": "https://github.com/iychoi/libra",
             "inputs": [
                 {
