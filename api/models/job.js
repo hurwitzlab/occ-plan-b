@@ -204,8 +204,8 @@ class JobManager {
         var self = this;
 
         self.transitionJob(job, STATUS.STAGING_INPUTS)
-        .then( () => { return remote_command('mkdir -p ' + job.stagingPath + '/data/') })
-        .then( () => { return remote_command('hdfs dfs -mkdir -p ' + job.targetPath) })
+//        .then( () => { return remote_command('mkdir -p ' + job.stagingPath + '/data/') })
+//        .then( () => { return remote_command('hdfs dfs -mkdir -p ' + job.targetPath) })
         .then( () => { return job.stageInputs() })
         .then( () => self.transitionJob(job, STATUS.RUNNING) )
         .then( () => { return job.runLibra() })
