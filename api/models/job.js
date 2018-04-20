@@ -204,8 +204,7 @@ class JobManager {
         var self = this;
 
         self.transitionJob(job, STATUS.STAGING_INPUTS)
-//        .then( () => { return remote_command('mkdir -p ' + job.stagingPath + '/data/') })
-//        .then( () => { return remote_command('hdfs dfs -mkdir -p ' + job.targetPath) })
+        .then( () => { return remote_command('mkdir -p ' + config.remoteStagingPath) })
         .then( () => { return job.stageInputs() })
         .then( () => self.transitionJob(job, STATUS.RUNNING) )
         .then( () => { return job.runLibra() })
@@ -312,28 +311,28 @@ function remote_copy(local_file) {
 //    var dest_path = path.dir + '/' + path.name + '.bz2';
 //    return remote_command('gunzip --stdout ' + src_path + ' | bzip2 > ' + dest_path + ' && rm ' + src_path);
 //}
-
-function remote_put_file(token, src_path, dest_path) {
-    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -F "fileToUpload=@' + src_path + '" ' + config.agaveFilesUrl + 'media/' + dest_path)
-}
-
-function remote_put_directory(token, src_path, dest_path) {
-    return remote_make_directory(token, dest_path)
-        .then( () => { return remote_command('ls -d -1 ' + src_path + '/*.*') } )
-        .then( ls => {
-            return ls.split("\n");
-        })
-        .each(file => { // transfer one file at a time to avoid "ssh_exchange_identification" error
-            if (file) {
-                return remote_put_file(token, file, dest_path);
-            }
-        });
-}
-
-function remote_make_directory(token, dest_path) {
-    var path = pathlib.parse(dest_path);
-    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X PUT -d "action=mkdir&path=' + path.base + '" ' + config.agaveFilesUrl + 'media/' + path.dir);
-}
+//
+//function remote_put_file(token, src_path, dest_path) {
+//    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -F "fileToUpload=@' + src_path + '" ' + config.agaveFilesUrl + 'media/' + dest_path)
+//}
+//
+//function remote_put_directory(token, src_path, dest_path) {
+//    return remote_make_directory(token, dest_path)
+//        .then( () => { return remote_command('ls -d -1 ' + src_path + '/*.*') } )
+//        .then( ls => {
+//            return ls.split("\n");
+//        })
+//        .each(file => { // transfer one file at a time to avoid "ssh_exchange_identification" error
+//            if (file) {
+//                return remote_put_file(token, file, dest_path);
+//            }
+//        });
+//}
+//
+//function remote_make_directory(token, dest_path) {
+//    var path = pathlib.parse(dest_path);
+//    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X PUT -d "action=mkdir&path=' + path.base + '" ' + config.agaveFilesUrl + 'media/' + path.dir);
+//}
 
 function escape(str) {
     str.replace(/\\/g, "\\\\")
