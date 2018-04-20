@@ -119,7 +119,7 @@
                         "enum_values": [
                             { "LOGALITHM": "Logarithm" },
                             { "BOOLEAN": "Boolean" },
-                            { "NATURAL": "Natural logarithm" }
+                            { "NATURAL": "Natural" }
                         ]
                     }
                 },
@@ -139,7 +139,7 @@
                         "enum_values": [
                             { "COSINESIMILARITY": "Cosine Similarity" },
                             { "BRAYCURTIS": "Bray-Curtis" },
-                            { "JENSENSHANNON": "Jensen-Shannon (experimental)" }
+                            { "JENSENSHANNON": "Jensen-Shannon" }
                         ]
                     }
                 }
