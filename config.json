@@ -64,6 +64,36 @@
                     }
                 },
                 {
+                    "id": "MIN_GROUP_SIZE",
+                    "details": {
+                        "label": "Minimum size of group in bytes",
+                        "description": "",
+                        "argument": "-s",
+                        "showArgument": true
+                    },
+                    "value": {
+                        "order": 2,
+                        "type": "number",
+                        "required": false,
+                        "default": "10GB"
+                    }
+                },
+                {
+                    "id": "MAX_NUM_GROUPS",
+                    "details": {
+                        "label": "Maximum number of groups",
+                        "description": "",
+                        "argument": "-g",
+                        "showArgument": true
+                    },
+                    "value": {
+                        "order": 3,
+                        "type": "number",
+                        "required": false,
+                        "default": "20"
+                    }
+                },
+                {
                     "id": "FILTER_ALG",
                     "details": {
                         "label": "Kmer filter algorithm",
@@ -72,15 +102,15 @@
                         "showArgument": true
                     },
                     "value": {
-                        "order": 2,
+                        "order": 5,
                         "type": "enumeration",
                         "required": false,
                         "default": "NOTUNIQUE",
                         "enum_values": [
-                            { "NONE": "None" },
+                            { "NOTUNIQUE": "Not unique" },
                             { "STDDEV": "Standard deviation" },
                             { "STDDEV2": "Two's standard deviation" },
-                            { "NOTUNIQUE": "Not unique" }
+                            { "NONE": "None" }
                         ]
                     }
                 },
@@ -93,7 +123,7 @@
                         "showArgument": true
                     },
                     "value": {
-                        "order": 3,
+                        "order": 6,
                         "type": "enumeration",
                         "required": true,
                         "default": "MAP",
@@ -112,7 +142,7 @@
                         "showArgument": true
                     },
                     "value": {
-                        "order": 4,
+                        "order": 7,
                         "type": "enumeration",
                         "required": false,
                         "default": "LOGALITHM",
@@ -132,7 +162,7 @@
                         "showArgument": true
                     },
                     "value": {
-                        "order": 4,
+                        "order": 8,
                         "type": "enumeration",
                         "required": false,
                         "default": "COSINESIMILARITY",
