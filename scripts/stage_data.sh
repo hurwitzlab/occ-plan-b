@@ -19,7 +19,7 @@ do
     iget -PTf $IRODS_PATH/$f $STAGING_PATH
 
     # Run Illyoung's hashing script -- temporary addition for his thesis
-    /home/mbomhoff/bin/hash_blocks.py $STAGING_PATH/$f
+    /home/mbomhoff/bin/hash_blocks.py $STAGING_PATH/$f || true
 
     ext="${f##*.}"
     name="${f%.*}"
