@@ -39,7 +39,7 @@ echo $LIBRA_CMD
 eval $LIBRA_CMD
 
 # Get result
-hdfs dfs -get $OUT_DIR/$JOB_ID/index $TMP_DIR/$JOB_ID/index
+#hdfs dfs -get $OUT_DIR/$JOB_ID/index $TMP_DIR/$JOB_ID/index # mdb removed 2/4/18 because it can fill up TMP_DIR
 hdfs dfs -get $OUT_DIR/$JOB_ID/score $TMP_DIR/$JOB_ID/score
 
 # Convert to distance & similarity matrices
