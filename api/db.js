@@ -51,3 +51,4 @@ function getTimestamp() {
 }
 
 exports.Database = Database;
+exports.getTimestamp = getTimestamp;

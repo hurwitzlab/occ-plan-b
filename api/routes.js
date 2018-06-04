@@ -92,6 +92,37 @@ module.exports = function(app, jobManager) {
         }
     });
 
+    app.get('/jobs/:id(\\S+)/history', (request, response) => {
+        var id = request.params.id;
+        console.log('GET /jobs/' + id + '/history');
+
+        try {
+            validateAgaveToken(request)
+            .then( async profile => {
+                var job = await jobManager.getJob(id, profile.username);
+                if (!job) {
+                    response.json({
+                        status: "error",
+                        message: "Job " + id + " not found"
+                    });
+                    return;
+                }
+
+                //var history = arrayify(job.history); // TODO
+                response.json({
+                    status: "success",
+                    result: []
+                });
+            });
+        }
+        catch (err) {
+            response.json({
+                status: "error",
+                message: err
+            });
+        }
+    });
+
     app.post('/jobs', (request, response) => {
         console.log("POST /jobs\n", request.body);
 

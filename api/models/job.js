@@ -36,7 +36,18 @@ class Job {
     }
 
     setStatus(newStatus) {
+        if (this.status == newStatus)
+            return;
+
         this.status = newStatus;
+
+        // TODO
+//        this.history.push({
+//            created: dblib.getTimestamp(),
+//            createdBy: this.username,
+//            description: "",
+//            status: newStatus
+//        });
     }
 
     stageInputs() {
