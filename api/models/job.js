@@ -4,6 +4,7 @@ const spawn = require('child_process').spawnSync;
 const execFile = require('child_process').execFile;
 const pathlib = require('path');
 const shortid = require('shortid');
+const requestp = require('request-promise');
 const config = require('../../config.json');
 
 const STATUS = {
@@ -57,14 +58,12 @@ class Job {
                 if (path.startsWith('hsyn:///')) // file is already present via Syndicate mount // TODO find a way to indicate this in job definition
                     return;
 
-//                promises.push(
-//                    remote_get_directory(self.token, path, staging_path)
-//                    .then( () => { return remote_command('hdfs dfs -put ' + staging_path + ' ' + self.targetPath) } )
-//                );
-
-                  path = '/iplant/home' + path;
+                  var irodsPath = '/iplant/home' + path;
                   promises.push(
-                      remote_command('sh ' + stage_script + ' ' + path + ' ' + this.id + ' ' + staging_path + ' ' + target_path + ' >> ' + log_file + ' 2>&1')
+                      sharePath(self.token, path)
+                      .then( () =>
+                          remote_command('sh ' + stage_script + ' ' + irodsPath + ' ' + this.id + ' ' + staging_path + ' ' + target_path + ' >> ' + log_file + ' 2>&1')
+                      )
                   );
             });
         }
@@ -281,6 +280,31 @@ function remote_copy(local_file) {
     const cmd = spawn('scp', [ local_file, config.remoteHost + ':' + config.remoteStagingPath ]);
     console.log( `stderr: ${cmd.stderr.toString()}` );
     console.log( `stdout: ${cmd.stdout.toString()}` );
+}
+
+function sharePath(token, path) {
+    var url = config.agaveFilesUrl + "pems/system/data.iplantcollaborative.org" + path;
+    var options = {
+        method: "POST",
+        uri: url,
+        headers: {
+            Accept: "application/json" ,
+            Authorization: token
+        },
+        form: {
+            username: "imicrobe",
+            permission: "READ_WRITE",
+            recursive: true
+        },
+        json: true
+    };
+
+    console.log("Sending POST", url);
+    return requestp(options);
+//      .catch(function (err) {
+//          console.error(err.message);
+//          res.status(500).send("Agave permissions request failed");
+//      });
 }
 
 //function remote_get_file(token, src_path, dest_path) {
