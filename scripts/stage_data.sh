@@ -1,4 +1,4 @@
-#!/bin/sh -x
+#!/bin/sh -ex
 
 IRODS_PATH=$1
 JOB_ID=$2

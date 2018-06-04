@@ -1,3 +1,5 @@
+#!/bin/sh -ex
+
 echo "Started Libra" `date`
 
 JOB_ID=$1
