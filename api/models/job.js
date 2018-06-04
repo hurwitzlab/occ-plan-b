@@ -51,8 +51,14 @@ class Job {
         var log_file = config.remoteStagingPath + '/libra.log';
 
         var promises = [];
+
+        // Share output path with "imicrobe"
+        promises.push(
+            sharePath(self.token, '/' + this.username + '/' + config.archivePath, false)
+        );
+
         if (this.inputs) {
-            Object.values(this.inputs).forEach( path => {
+            Object.values(this.inputs).forEach( path => { // In reality there will only be one input path for Libra
                 console.log('Job ' + this.id + ': staging input: ' + path);
 
                 if (path.startsWith('hsyn:///')) // file is already present via Syndicate mount // TODO find a way to indicate this in job definition
@@ -60,7 +66,7 @@ class Job {
 
                   var irodsPath = '/iplant/home' + path;
                   promises.push(
-                      sharePath(self.token, path)
+                      sharePath(self.token, path, true)
                       .then( () =>
                           remote_command('sh ' + stage_script + ' ' + irodsPath + ' ' + this.id + ' ' + staging_path + ' ' + target_path + ' >> ' + log_file + ' 2>&1')
                       )
@@ -96,11 +102,12 @@ class Job {
     }
 
     archive() {
-        var ds_output_path = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
-        return remote_command('iput -KTr ' + this.stagingPath + ' ' + ds_output_path);
-
-//        var ds_output_path = '/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
-//        return remote_put_directory(this.token, this.stagingPath + '/score', ds_output_path);
+        var self = this;
+        var archivePath = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
+        return remote_command('iput -KTr ' + this.stagingPath + ' ' + archivePath)
+            .then( () =>
+                remote_command('ichmod -r own ' + this.username + ' ' + archivePath)
+            );
     }
 }
 
@@ -282,7 +289,7 @@ function remote_copy(local_file) {
     console.log( `stdout: ${cmd.stdout.toString()}` );
 }
 
-function sharePath(token, path) {
+function sharePath(token, path, recursive) {
     var url = config.agaveFilesUrl + "pems/system/data.iplantcollaborative.org" + path;
     var options = {
         method: "POST",
@@ -294,7 +301,7 @@ function sharePath(token, path) {
         form: {
             username: "imicrobe",
             permission: "READ_WRITE",
-            recursive: true
+            recursive: recursive
         },
         json: true
     };
