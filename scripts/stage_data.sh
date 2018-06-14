@@ -30,6 +30,10 @@ do
         rm $STAGING_PATH/$f
         #f=$name.bz2
         f=$name
+    elif [[ "$ext" = "bz2" || "$ext" = "bzip2" ]]; then
+        bunzip2 --stdout $STAGING_PATH/$f > $STAGING_PATH/$name # temp fix for FASTQ.bz2 issues (5/21/18)
+        rm $STAGING_PATH/$f
+        f=$name
     fi
 
     hdfs dfs -put -f $STAGING_PATH/$f $HDFS_PATH
