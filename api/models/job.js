@@ -327,11 +327,12 @@ function sharePath(token, path, recursive) {
         json: true
     };
 
-    console.log("Sending POST", url);
     return getPermissions(token, path)
           .then( permission => {
-              if (permission == "NONE")
+              if (permission == "NONE") {
+                  console.log("Sending POST", url);
                   return requestp(options);
+              }
               else
                   return new Promise((resolve) => { resolve(); });
           });
