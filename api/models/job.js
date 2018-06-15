@@ -76,12 +76,22 @@ class Job {
                     return;
 
                   var irodsPath = '/iplant/home' + path;
-                  promises.push(
-                      sharePath(self.token, path, true)
-                      .then( () =>
-                          remote_command('sh ' + stage_script + ' ' + irodsPath + ' ' + this.id + ' ' + staging_path + ' ' + target_path + ' >> ' + log_file + ' 2>&1')
-                      )
-                  );
+                  var runStagingScript = remote_command('sh ' + stage_script + ' ' + irodsPath + ' ' + this.id + ' ' + staging_path + ' ' + target_path + ' >> ' + log_file + ' 2>&1');
+
+                  // Share input path with "imicrobe" (skip for /iplant/home/shared paths)
+                  if (irodsPath.startsWith('/iplant/home/shared')) {
+                      promises.push(
+                          runStagingScript
+                      );
+                  }
+                  else {
+                      promises.push(
+                          sharePath(self.token, path, true)
+                              .then( () =>
+                                  runStagingScript
+                              )
+                      );
+                  }
             });
         }
 
@@ -318,7 +328,50 @@ function sharePath(token, path, recursive) {
     };
 
     console.log("Sending POST", url);
-    return requestp(options);
+    return getPermissions(token, path)
+          .then( permission => {
+              if (permission == "NONE")
+                  return requestp(options);
+              else
+                  return new Promise((resolve) => { resolve(); });
+          });
+//      .catch(function (err) {
+//          console.error(err.message);
+//          res.status(500).send("Agave permissions request failed");
+//      });
+}
+
+function getPermissions(token, path) {
+    var url = config.agaveFilesUrl + "pems/system/data.iplantcollaborative.org" + path;
+    var options = {
+        method: "GET",
+        uri: url,
+        headers: {
+            Accept: "application/json" ,
+            Authorization: token
+        },
+        form: {
+            username: "imicrobe",
+            recursive: false
+        },
+        json: true
+    };
+
+    console.log("Sending GET", url);
+    return requestp(options)
+        .then(response => {
+            if (response && response.result) {
+                var user = response.result.find(user => user.username == "imicrobe");
+                if (user && user.permission) {
+                    if (user.permission.write)
+                        return "READ_WRITE";
+                    if (user.permission.read)
+                        return "READ";
+                }
+            }
+
+            return "NONE";
+        });
 //      .catch(function (err) {
 //          console.error(err.message);
 //          res.status(500).send("Agave permissions request failed");
