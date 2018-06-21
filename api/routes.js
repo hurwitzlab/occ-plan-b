@@ -39,7 +39,11 @@ module.exports = function(app, jobManager) {
             .then( async profile => {
                 var jobs = await jobManager.getJobs(profile.username);
                 if (jobs) {
-                    jobs = jobs.map( j => { j.inputs = arrayify(j.inputs); return j; } );
+                    jobs = jobs.map(j => {
+                        j.inputs = arrayify(j.inputs);
+                        j.owner = j.username;
+                        return j;
+                    });
                     response.json({
                         status: "success",
                         result: jobs
@@ -78,6 +82,7 @@ module.exports = function(app, jobManager) {
                 }
 
                 job.inputs = arrayify(job.inputs);
+                job.owner = job.username;
                 response.json({
                     status: "success",
                     result: job
