@@ -25,15 +25,9 @@ do
     name="${f%.*}"
 
     if [[ "$ext" = "gz" || "$ext" = "gzip" ]]; then
-        #gunzip --stdout $STAGING_PATH/$f | bzip2 > $STAGING_PATH/$name.bz2
-        gunzip --stdout $STAGING_PATH/$f > $STAGING_PATH/$name # temp fix for FASTQ.bz2 issues (5/21/18)
+        gunzip --stdout $STAGING_PATH/$f | bzip2 > $STAGING_PATH/$name.bz2
         rm $STAGING_PATH/$f
-        #f=$name.bz2
-        f=$name
-    elif [[ "$ext" = "bz2" || "$ext" = "bzip2" ]]; then
-        bunzip2 --stdout $STAGING_PATH/$f > $STAGING_PATH/$name # temp fix for FASTQ.bz2 issues (5/21/18)
-        rm $STAGING_PATH/$f
-        f=$name
+        f=$name.bz2
     fi
 
     hdfs dfs -put -f $STAGING_PATH/$f $HDFS_PATH
