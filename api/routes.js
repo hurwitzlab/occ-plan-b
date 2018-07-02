@@ -3,18 +3,32 @@
 const job  = require('./models/job');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const https = require("https");
+const requestp = require('request-promise');
 const config = require('../config.json');
 
+// Create error types
+class MyError extends Error {
+    constructor(message, statusCode) {
+        super(message);
+        this.statusCode = statusCode;
+    }
+}
+
+const ERR_BAD_REQUEST = new MyError("Bad request", 400);
+const ERR_UNAUTHORIZED = new MyError("Unauthorized", 401);
+const ERR_PERMISSION_DENIED = new MyError("Permission denied", 403);
+const ERR_NOT_FOUND = new MyError("Not found", 404);
 
 module.exports = function(app, jobManager) {
     app.use(cors());
     app.use(bodyParser.json()); // support json encoded bodies
     app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
 
+    app.use(requestLogger);
+    app.use(agaveTokenValidator);
+
     app.get('/apps/:id(\\S+)', function(request, response) {
         var id = request.params.id;
-        console.log('GET /apps/' + id);
 
         var apps = config.apps;
         if (typeof apps[id] === 'undefined') {
@@ -31,171 +45,154 @@ module.exports = function(app, jobManager) {
         });
     });
 
-    app.get('/jobs', (request, response) => {
-        console.log('GET /jobs');
+    app.get('/jobs', async (request, response) => {
+        requireAuth(request);
 
-        try {
-            validateAgaveToken(request)
-            .then( async profile => {
-                var jobs = await jobManager.getJobs(profile.username);
-                if (jobs) {
-                    jobs = jobs.map(j => {
-                        j.inputs = arrayify(j.inputs);
-                        j.owner = j.username;
-                        return j;
-                    });
-                    response.json({
-                        status: "success",
-                        result: jobs
-                    });
-                }
-                else {
-                    response.json({
-                        status: "success",
-                        result: []
-                    });
-                }
+        var jobs = await jobManager.getJobs(request.auth.profile.username);
+        if (jobs) {
+            jobs = jobs.map(j => {
+                j.inputs = arrayify(j.inputs);
+                j.owner = j.username;
+                return j;
             });
         }
-        catch (err) {
-            response.json({
-                status: "error",
-                message: err
-            });
-        }
+
+        response.json({
+            status: "success",
+            result: jobs || []
+        });
     });
 
-    app.get('/jobs/:id(\\S+)', (request, response) => {
-        var id = request.params.id;
-        console.log('GET /jobs/' + id);
+    app.get('/jobs/:id(\\S+)', async (request, response) => {
+        requireAuth(request);
 
         try {
-            validateAgaveToken(request)
-            .then( async profile => {
-                var job = await jobManager.getJob(id, profile.username);
-                if (!job) {
-                    response.json({
-                        status: "error",
-                        message: "Job " + id + " not found"
-                    });
-                    return;
-                }
+            var job = await jobManager.getJob(request.params.id, request.auth.profile.username);
+            if (!job)
+                throw(ERR_NOT_FOUND);
 
-                job.inputs = arrayify(job.inputs);
-                job.owner = job.username;
-                response.json({
-                    status: "success",
-                    result: job
-                });
-            });
-        }
-        catch (err) {
+            job.inputs = arrayify(job.inputs);
+            job.owner = job.username;
             response.json({
-                status: "error",
-                message: err
+                status: "success",
+                result: job
             });
         }
+        catch(error) {
+            errorHandler(error, request, response);
+        };
     });
 
-    app.get('/jobs/:id(\\S+)/history', (request, response) => {
-        var id = request.params.id;
-        console.log('GET /jobs/' + id + '/history');
-
+    app.get('/jobs/:id(\\S+)/history', async (request, response) => {
         try {
-            validateAgaveToken(request)
-            .then( async profile => {
-                var job = await jobManager.getJob(id, profile.username);
-                if (!job) {
-                    response.json({
-                        status: "error",
-                        message: "Job " + id + " not found"
-                    });
-                    return;
-                }
+            var job = await jobManager.getJob(request.params.id, request.auth.profile.username);
+            if (!job)
+                throw(ERR_NOT_FOUND);
 
-                //var history = arrayify(job.history); // TODO
-                response.json({
-                    status: "success",
-                    result: []
-                });
-            });
-        }
-        catch (err) {
+            //var history = arrayify(job.history); // TODO
             response.json({
-                status: "error",
-                message: err
+                status: "success",
+                result: []
             });
         }
+        catch(error) {
+            errorHandler(error, request, response);
+        };
     });
 
-    app.post('/jobs', (request, response) => {
-        console.log("POST /jobs\n", request.body);
+    app.post('/jobs', async (request, response) => {
+        var j = new job.Job(request.body);
+        j.username = request.auth.profile.username;
+        j.token = request.auth.profile.token;
+        await jobManager.submitJob(j);
 
-        try {
-            validateAgaveToken(request)
-            .then( async profile => {
-                var j = new job.Job(request.body);
-                j.username = profile.username;
-                j.token = profile.token;
-                await jobManager.submitJob(j);
+        response.json({
+            status: "success",
+            result: {
+                id: j.id
+            }
+        });
+    });
 
-                response.json({
-                    status: "success",
-                    result: {
-                        id: j.id
-                    }
-                });
-            });
-        }
-        catch (err) {
-            response.json({
-                status: "error",
-                message: err
-            });
-        }
+    app.use(errorHandler);
+
+    // Catch-all function
+    app.get('*', function(req, res, next){
+        res.status(404).send("Unknown route: " + req.path);
     });
 }
 
-function validateAgaveToken(request) {
-    return new Promise((resolve, reject) => {
-        var token;
-        if (!request.headers || !request.headers.authorization) {
-            reject(new Error('Authorization token missing'));
-        }
-        token = request.headers.authorization;
-        console.log("token:", token);
+function requestLogger(req, res, next) {
+    console.log(["REQUEST:", req.method, req.url].join(" ").concat(" ").padEnd(80, "-"));
+    next();
+}
 
-        const profileRequest = https.request(
-            {   method: 'GET',
-                host: 'agave.iplantc.org',
-                port: 443,
-                path: '/profiles/v2/me',
-                headers: {
-                    Authorization: token
-                }
-            },
-            response => {
-                response.setEncoding("utf8");
-                if (response.statusCode < 200 || response.statusCode > 299) {
-                    reject(new Error('Failed to load page, status code: ' + response.statusCode));
-                }
+function errorHandler(error, req, res, next) {
+    console.log("ERROR ".padEnd(80, "!"));
+    console.log(error.stack);
 
-                var body = [];
-                response.on('data', (chunk) => body.push(chunk));
-                response.on('end', () => {
-                    body = body.join('');
-                    var data = JSON.parse(body);
-                    if (!data || data.status != "success")
-                        reject(new Error('Status ' + data.status));
-                    else {
-                        data.result.token = token;
-                        resolve(data.result);
-                    }
-                });
+    let statusCode = error.statusCode || 500;
+    let message = error.message || "Unknown error";
+
+    res.status(statusCode).send(message);
+}
+
+function requireAuth(req) {
+    if (!req || !req.auth || !req.auth.validToken || !req.auth.profile)
+        throw(ERR_UNAUTHORIZED);
+}
+
+function agaveTokenValidator(req, res, next) {
+    var token;
+    if (req && req.headers)
+        token = req.headers.authorization;
+    console.log("validateAgaveToken: token:", token);
+
+    req.auth = {
+        validToken: false
+    };
+
+    if (!token)
+        next();
+    else {
+        getAgaveProfile(token)
+        .then(function (response) {
+            if (!response || response.status != "success") {
+                console.log('validateAgaveToken: !!!! Bad profile status: ' + response.status);
+                return;
             }
-        );
-        profileRequest.on('error', (err) => reject(err));
-        profileRequest.end();
+            else {
+                response.result.token = token;
+                return response.result;
+            }
+        })
+        .then( profile => {
+            if (profile) {
+                console.log("validateAgaveToken: *** success ***  username:", profile.username);
+
+                req.auth = {
+                    validToken: true,
+                    profile: profile
+
+                };
+            }
+        })
+        .catch( error => {
+            console.log("validateAgaveToken: !!!!", error.message);
+        })
+        .finally(next);
+    }
+}
+
+function getAgaveProfile(token) {
+    return requestp({
+        method: "GET",
+        uri: "https://agave.iplantc.org/profiles/v2/me", // FIXME hardcoded
+        headers: {
+            Authorization: token,
+            Accept: "application/json"
+        },
+        json: true
     });
 }
 
