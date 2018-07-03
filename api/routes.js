@@ -28,9 +28,11 @@ module.exports = function(app, jobManager) {
     app.use(agaveTokenValidator);
 
     app.get('/apps/:id(\\S+)', function(request, response) {
-        var id = request.params.id;
+        requireAuth(request);
 
+        var id = request.params.id;
         var apps = config.apps;
+
         if (typeof apps[id] === 'undefined') {
             response.json({
                 status: "failure",
