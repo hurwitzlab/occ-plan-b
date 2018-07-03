@@ -290,7 +290,7 @@ function remote_command(cmd_str) {
                 console.log('remote_command:stderr:', stderr);
 
                 if (error) {
-                    console.error(error);
+                    console.log('remote_command:error:', error);
                     reject(error);
                 }
                 else {

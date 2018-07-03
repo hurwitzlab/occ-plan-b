@@ -1,4 +1,6 @@
-#!/bin/sh -ex
+#!/bin/sh
+#set -x
+set -e
 
 IRODS_PATH=$1
 JOB_ID=$2
@@ -11,6 +13,9 @@ mkdir -p $STAGING_PATH
 hdfs dfs -mkdir -p $HDFS_PATH
 
 filelist=`ils $IRODS_PATH | sed -n '1!p'`
+if [[ "$filelist" = "" ]]; then
+    exit 1
+fi
 
 for f in $filelist
 do
@@ -33,7 +38,7 @@ do
     hdfs dfs -put -f $STAGING_PATH/$f $HDFS_PATH
 
     rm $STAGING_PATH/*
-done
+done || exit 1
 
 rm -r $STAGING_PATH
 
