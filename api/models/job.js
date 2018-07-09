@@ -64,8 +64,12 @@ class Job {
         var promises = [];
 
         // Share output path with "imicrobe"
+        var archivePath = '/' + this.username + '/' + config.archivePath
         promises.push(
-            sharePath(self.token, '/' + this.username + '/' + config.archivePath, false)
+            remote_make_directory(self.token, archivePath) // Create archive path in case it doesn't exist yet (new user)
+            .then( () =>
+                sharePath(self.token, archivePath, false)
+            )
         );
 
         if (this.inputs) {
@@ -424,11 +428,12 @@ function getPermissions(token, path) {
 //            }
 //        });
 //}
-//
-//function remote_make_directory(token, dest_path) {
-//    var path = pathlib.parse(dest_path);
-//    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X PUT -d "action=mkdir&path=' + path.base + '" ' + config.agaveFilesUrl + 'media/' + path.dir);
-//}
+
+function remote_make_directory(token, dest_path) {
+    console.log("Creating remote directory", dest_path);
+    var path = pathlib.parse(dest_path);
+    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X PUT -d "action=mkdir&path=' + path.base + '" ' + config.agaveFilesUrl + 'media/' + path.dir);
+}
 
 function escape(str) {
     str.replace(/\\/g, "\\\\")
