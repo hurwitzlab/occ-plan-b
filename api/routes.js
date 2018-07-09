@@ -65,7 +65,8 @@ module.exports = function(app, jobManager) {
         });
     });
 
-    app.get('/jobs/:id(\\S+)', async (request, response) => {
+//    app.get('/jobs/:id(\\S+)', async (request, response) => {
+    app.get('/jobs/:id([\\w\\-]+)', async (request, response) => {
         requireAuth(request);
 
         try {
@@ -85,7 +86,7 @@ module.exports = function(app, jobManager) {
         };
     });
 
-    app.get('/jobs/:id(\\S+)/history', async (request, response) => {
+    app.get('/jobs/:id([\\w\\-]+)/history', async (request, response) => {
         try {
             var job = await jobManager.getJob(request.params.id, request.auth.profile.username);
             if (!job)
