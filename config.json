@@ -75,6 +75,7 @@
                         "order": 2,
                         "type": "number",
                         "required": false,
+                        "visible": false,
                         "default": "10GB"
                     }
                 },
@@ -90,6 +91,7 @@
                         "order": 3,
                         "type": "number",
                         "required": false,
+                        "visible": false,
                         "default": "20"
                     }
                 },
@@ -126,6 +128,7 @@
                         "order": 6,
                         "type": "enumeration",
                         "required": true,
+                        "visible": false,
                         "default": "MAP",
                         "enum_values": [
                             { "MAP": "MAP" },
