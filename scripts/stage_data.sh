@@ -14,8 +14,11 @@ hdfs dfs -mkdir -p $HDFS_PATH
 
 filelist=`ils $IRODS_PATH | sed -n '1!p'`
 if [[ "$filelist" = "" ]]; then
-    exit 1
+    filelist=`basename $IRODS_PATH`
+    IRODS_PATH=`dirname $IRODS_PATH`
 fi
+
+echo $filelist
 
 for f in $filelist
 do

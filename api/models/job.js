@@ -1,5 +1,6 @@
 const dblib = require('../db.js');
 const Promise = require('bluebird');
+const sequence = require('promise-sequence');
 const spawn = require('child_process').spawnSync;
 const execFile = require('child_process').execFile;
 const pathlib = require('path');
@@ -65,7 +66,7 @@ class Job {
 
         // Share output path with "imicrobe"
         var archivePath = '/' + this.username + '/' + config.archivePath
-        promises.push(
+        promises.push( () =>
             remote_make_directory(self.token, archivePath) // Create archive path in case it doesn't exist yet (new user)
             .then( () =>
                 sharePath(self.token, archivePath, false)
@@ -73,33 +74,35 @@ class Job {
         );
 
         if (this.inputs) {
-            Object.values(this.inputs).forEach( path => { // In reality there will only be one input path for Libra
-                console.log('Job ' + this.id + ': staging input: ' + path);
+            Object.values(this.inputs).forEach( pathStr => { // In reality there will only be one input for Libra
+                var paths = pathStr.split(";");
 
-                if (path.startsWith('hsyn:///')) // file is already present via Syndicate mount // TODO find a way to indicate this in job definition
-                    return;
+                paths.forEach( path => {
+                    console.log('Job ' + this.id + ': staging input: ' + path);
 
-                  var irodsPath = '/iplant/home' + path;
-                  var runStagingScript = remote_command('sh ' + stage_script + ' ' + irodsPath + ' ' + this.id + ' ' + staging_path + ' ' + target_path + ' >> ' + log_file + ' 2>&1');
+                    if (path.startsWith('hsyn:///')) // file is already present via Syndicate mount // TODO find a way to indicate this in job definition
+                        return;
 
-                  // Share input path with "imicrobe" (skip for /iplant/home/shared paths)
-                  if (irodsPath.startsWith('/iplant/home/shared')) {
-                      promises.push(
-                          runStagingScript
-                      );
-                  }
-                  else {
-                      promises.push(
-                          sharePath(self.token, path, true)
-                              .then( () =>
-                                  runStagingScript
-                              )
-                      );
-                  }
+                      var irodsPath = '/iplant/home' + path;
+                      var runStagingScript = () => remote_command('sh ' + stage_script + ' "'+ irodsPath + '" ' + this.id + ' ' + staging_path + ' ' + target_path + ' >> ' + log_file + ' 2>&1');
+
+                      // Share input path with "imicrobe" (skip for /iplant/home/shared paths)
+                      if (irodsPath.startsWith('/iplant/home/shared')) {
+                          promises.push( runStagingScript );
+                      }
+                      else {
+                          promises.push( () =>
+                              sharePath(self.token, path, true)
+                                  .then(
+                                      runStagingScript
+                                  )
+                          );
+                      }
+                  });
             });
         }
 
-        return Promise.all(promises);
+        return sequence.pipeline(promises);
     }
 
     runLibra() {
