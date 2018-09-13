@@ -87,6 +87,8 @@ module.exports = function(app, jobManager) {
     });
 
     app.get('/jobs/:id([\\w\\-]+)/history', async (request, response) => {
+        requireAuth(request);
+        
         try {
             var job = await jobManager.getJob(request.params.id, request.auth.profile.username);
             if (!job)
@@ -104,6 +106,8 @@ module.exports = function(app, jobManager) {
     });
 
     app.post('/jobs', async (request, response) => {
+        requireAuth(request);
+
         var j = new job.Job(request.body);
         j.username = request.auth.profile.username;
         j.token = request.auth.profile.token;
