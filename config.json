@@ -18,8 +18,8 @@
                 {
                     "id": "IN_DIR",
                     "details": {
-                        "label": "Directory or list of input FASTA files",
-                        "description": ""
+                        "label": "Directory or list of input files",
+                        "description": "FASTA/FASTQ formats supported"
                     },
                     "value": {
                         "order": 0,
