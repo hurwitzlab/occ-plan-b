@@ -328,7 +328,7 @@ function sharePath(token, path, recursive) {
 
     return getPermissions(token, path)
           .then( permission => {
-              if (permission == "NONE") {
+              if (permission != "READ_WRITE") {
                   console.log("Sending POST", url);
                   return requestp(options);
               }
