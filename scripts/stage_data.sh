@@ -7,6 +7,7 @@ JOB_ID=$2
 STAGING_PATH=$3
 HDFS_PATH=$4
 
+echo "Started Staging Data" `date`
 echo $0 $@
 
 mkdir -p $STAGING_PATH
@@ -18,7 +19,7 @@ if [[ "$filelist" = "" ]]; then
     IRODS_PATH=`dirname $IRODS_PATH`
 fi
 
-echo $filelist
+echo "Files: " $filelist
 
 for f in $filelist
 do
@@ -45,4 +46,4 @@ done || exit 1
 
 rm -r $STAGING_PATH
 
-echo "All done!"
+echo "Finished Staging Data" `date`
