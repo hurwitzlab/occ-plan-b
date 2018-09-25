@@ -67,7 +67,7 @@ class Job {
         // Share output path with "imicrobe"
         var archivePath = '/' + this.username + '/' + config.archivePath
         promises.push( () => remote_make_directory(self.token, archivePath) ); // Create archive path in case it doesn't exist yet (new user)
-        promises.push( () => sharePath(self.token, archivePath, false) );
+        promises.push( () => sharePath(self.token, archivePath, "READ_WRITE", false) );
 
         if (this.inputs) {
             Object.values(this.inputs).forEach( pathStr => { // In reality there will only be one input for Libra
@@ -87,7 +87,7 @@ class Job {
                           promises.push( runStagingScript );
                       }
                       else {
-                          promises.push( () => sharePath(self.token, path, true) );
+                          promises.push( () => sharePath(self.token, path, "READ", true) );
                           promises.push( runStagingScript );
                       }
                   });
@@ -309,74 +309,72 @@ function remote_copy(local_file) {
     console.log( `stdout: ${cmd.stdout.toString()}` );
 }
 
-function sharePath(token, path, recursive) {
+function sharePath(token, path, permission, recursive) {
     var url = config.agaveFilesUrl + "pems/system/data.iplantcollaborative.org" + path;
-    var options = {
-        method: "POST",
-        uri: url,
-        headers: {
-            Accept: "application/json" ,
-            Authorization: token
-        },
-        form: {
-            username: "imicrobe",
-            permission: "READ_WRITE",
-            recursive: recursive
-        },
-        json: true
-    };
+//    var options = {
+//        method: "POST",
+//        uri: url,
+//        headers: {
+//            Accept: "application/json" ,
+//            Authorization: token
+//        },
+//        form: {
+//            username: "imicrobe",
+//            permission: "READ_WRITE",
+//            recursive: recursive
+//        },
+//        json: true
+//    };
+//
+//    return getPermissions(token, path)
+//          .then( permission => {
+//              if (permission != "READ_WRITE") {
+//                  console.log("Sending POST", url);
+//                  return requestp(options);
+//              }
+//              else
+//                  return new Promise((resolve) => { resolve(); });
+//          })
+//          .catch(function (err) {
+//              console.error(err.message);
+//              throw(new Error("Agave permissions request failed"));
+//          });
 
-    return getPermissions(token, path)
-          .then( permission => {
-              if (permission != "READ_WRITE") {
-                  console.log("Sending POST", url);
-                  return requestp(options);
-              }
-              else
-                  return new Promise((resolve) => { resolve(); });
-          });
-//      .catch(function (err) {
-//          console.error(err.message);
-//          res.status(500).send("Agave permissions request failed");
-//      });
+    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -d "username=imicrobe&permission=' + permission + '&recursive=' + recursive + '" ' + url);
 }
 
-function getPermissions(token, path) {
-    var url = config.agaveFilesUrl + "pems/system/data.iplantcollaborative.org" + path;
-    var options = {
-        method: "GET",
-        uri: url,
-        headers: {
-            Accept: "application/json" ,
-            Authorization: token
-        },
-        form: {
-            username: "imicrobe",
-            recursive: false
-        },
-        json: true
-    };
-
-    console.log("Sending GET", url);
-    return requestp(options)
-        .then(response => {
-            if (response && response.result) {
-                var user = response.result.find(user => user.username == "imicrobe");
-                if (user && user.permission) {
-                    if (user.permission.write)
-                        return "READ_WRITE";
-                    if (user.permission.read)
-                        return "READ";
-                }
-            }
-
-            return "NONE";
-        });
-//      .catch(function (err) {
-//          console.error(err.message);
-//          res.status(500).send("Agave permissions request failed");
-//      });
-}
+//function getPermissions(token, path) {
+//    var url = config.agaveFilesUrl + "pems/system/data.iplantcollaborative.org" + path;
+//    var options = {
+//        method: "GET",
+//        uri: url,
+//        headers: {
+//            Accept: "application/json" ,
+//            Authorization: token
+//        },
+//        form: {
+//            username: "imicrobe",
+//            recursive: false
+//        },
+//        json: true
+//    };
+//
+//    console.log("Sending GET", url);
+//    return requestp(options)
+//        .then(response => {
+//            if (response && response.result) {
+//                var user = response.result.find(user => user.username == "imicrobe");
+//                if (user && user.permission) {
+//                    if (user.permission.write)
+//                        return "READ_WRITE";
+//                    if (user.permission.read)
+//                        return "READ";
+//                }
+//            }
+//
+//            return "NONE";
+//        });
+//}
 
 //function remote_get_file(token, src_path, dest_path) {
 //    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -o ' + dest_path + ' ' + config.agaveFilesUrl + 'media' + src_path);
