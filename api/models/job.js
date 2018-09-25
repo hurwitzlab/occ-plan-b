@@ -66,12 +66,8 @@ class Job {
 
         // Share output path with "imicrobe"
         var archivePath = '/' + this.username + '/' + config.archivePath
-        promises.push( () =>
-            remote_make_directory(self.token, archivePath) // Create archive path in case it doesn't exist yet (new user)
-            .then( () =>
-                sharePath(self.token, archivePath, false)
-            )
-        );
+        promises.push( () => remote_make_directory(self.token, archivePath) ); // Create archive path in case it doesn't exist yet (new user)
+        promises.push( () => sharePath(self.token, archivePath, false) );
 
         if (this.inputs) {
             Object.values(this.inputs).forEach( pathStr => { // In reality there will only be one input for Libra
@@ -91,12 +87,8 @@ class Job {
                           promises.push( runStagingScript );
                       }
                       else {
-                          promises.push( () =>
-                              sharePath(self.token, path, true)
-                                  .then(
-                                      runStagingScript
-                                  )
-                          );
+                          promises.push( () => sharePath(self.token, path, true) );
+                          promises.push( runStagingScript );
                       }
                   });
             });
