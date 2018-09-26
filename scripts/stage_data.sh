@@ -48,7 +48,7 @@ do
     echo "Copying to HDFS" $f
     hdfs dfs -put -f $STAGING_PATH/$f $HDFS_PATH
 
-    rm $STAGING_PATH/*
+    rm $STAGING_PATH/$f
 done || exit 1
 
 rm -r $STAGING_PATH

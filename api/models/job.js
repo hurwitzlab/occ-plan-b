@@ -34,6 +34,8 @@ class Job {
         this.status = props.status || STATUS.CREATED;
         this.stagingPath = config.remoteStagingPath + '/' + this.id;
         this.targetPath = config.remoteTargetPath + '/' + this.id;
+        this.mainLogFile = config.remoteStagingPath + '/libra.log';
+        this.jobLogFile = this.stagingPath + '/libra.log';
     }
 
     setStatus(newStatus) {
@@ -53,14 +55,12 @@ class Job {
 
     stageInputs() {
         var self = this;
-        var staging_path = this.stagingPath + '/data/';
-        var target_path = this.targetPath + '/data';
+        var stagingPath = this.stagingPath + '/data/';
+        var targetPath = this.targetPath + '/data';
+        var stageScript = config.remoteStagingPath + '/stage_data.sh';
 
         // Copy data staging script to remote system
         remote_copy('./scripts/stage_data.sh');
-
-        var stage_script = config.remoteStagingPath + '/stage_data.sh';
-        var log_file = config.remoteStagingPath + '/libra.log';
 
         var promises = [];
 
@@ -68,6 +68,9 @@ class Job {
         var archivePath = '/' + this.username + '/' + config.archivePath
         promises.push( () => remote_make_directory(self.token, archivePath) ); // Create archive path in case it doesn't exist yet (new user)
         promises.push( () => sharePath(self.token, archivePath, "READ_WRITE", false) );
+
+        // Create log file
+        promises.push( () => remote_command('mkdir -p ' + this.stagingPath + ' && touch ' + this.jobLogFile) );
 
         if (this.inputs) {
             Object.values(this.inputs).forEach( pathStr => { // In reality there will only be one input for Libra
@@ -80,7 +83,7 @@ class Job {
                         return;
 
                       var irodsPath = '/iplant/home' + path;
-                      var runStagingScript = () => remote_command('sh ' + stage_script + ' "'+ irodsPath + '" ' + this.id + ' ' + staging_path + ' ' + target_path + ' >> ' + log_file + ' 2>&1');
+                      var runStagingScript = () => remote_command('sh ' + stageScript + ' "'+ irodsPath + '" ' + this.id + ' ' + stagingPath + ' ' + targetPath + ' 2>&1 | tee -a ' + this.mainLogFile + ' ' + this.jobLogFile);
 
                       // Share input path with "imicrobe" (skip for /iplant/home/shared paths)
                       if (irodsPath.startsWith('/iplant/home/shared')) {
@@ -106,19 +109,17 @@ class Job {
         var WEIGHTING_ALG = this.parameters.WEIGHTING_ALG || "LOGALITHM";
         var SCORING_ALG = this.parameters.SCORING_ALG || "COSINESIMILARITY";
 
-        var target_path = this.targetPath + '/data/';
-        var input_path;
+        var targetPath = this.targetPath + '/data/';
+        var inputPath;
         if (this.inputs.IN_DIR.startsWith('hsyn:///')) // Syndicate mount
-            input_path = this.inputs.IN_DIR;
+            inputPath = this.inputs.IN_DIR;
         else // Staged data from Data Store
-            input_path = target_path;// + pathlib.basename(this.inputs.IN_DIR);
+            inputPath = targetPath;// + pathlib.basename(this.inputs.IN_DIR);
 
         // Copy job execution script to remote system
         remote_copy('./scripts/run_libra.sh');
-
-        var run_script = config.remoteStagingPath + '/run_libra.sh';
-        var log_file = config.remoteStagingPath + '/libra.log';
-        return remote_command('sh ' + run_script + ' ' + this.id + ' ' + input_path + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' ' + SCORING_ALG + ' >> ' + log_file + ' 2>&1');
+        var runScript = config.remoteStagingPath + '/run_libra.sh';
+        return remote_command('sh ' + runScript + ' ' + this.id + ' ' + inputPath + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' ' + SCORING_ALG + ' 2>&1 | tee -a ' + this.mainLogFile + ' ' + this.jobLogFile);
     }
 
     archive() {
