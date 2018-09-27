@@ -18,7 +18,7 @@ OUT_DIR=/user/mbomhoff/occ
 LIBRA_DIR=/home/mbomhoff/repos/libra
 
 # Index
-LIBRA_CMD="hadoop jar $LIBRA_DIR/dist/libra-all.jar -D mapred.child.java.opts=-Xmx$MEM preprocess \
+LIBRA_CMD="hadoop jar $LIBRA_DIR/dist/libra-all.jar -D mapred.child.java.opts=-Xmx$MEM -D mapreduce.reduce.shuffle.input.buffer.percent=0.20 preprocess \
 -k $KMER_SIZE \
 -t $NUM_TASKS \
 -f $FILTER_ALG \
