@@ -28,8 +28,9 @@ do
     echo "Finished transferring" $f
 
     # Run Illyoung's hashing script -- temporary addition for his thesis
-    echo "Hashing" $f
-    /home/mbomhoff/bin/hash_blocks.py $STAGING_PATH/$f || true
+    # mdb removed 3/27/19 -- script reporting "connection refused" error
+    #echo "Hashing" $f
+    #/home/mbomhoff/bin/hash_blocks.py $STAGING_PATH/$f || true
 
     ext="${f##*.}"
     name="${f%.*}"
