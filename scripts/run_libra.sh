@@ -11,14 +11,15 @@ RUN_MODE=$6
 WEIGHTING_ALG=$7
 SCORING_ALG=$8
 
-MEM=32768M
 TMP_DIR=/tmp/occ
 DONE_FILE=$TMP_DIR/$JOB_ID.done
 OUT_DIR=/user/mbomhoff/occ
 LIBRA_DIR=/home/mbomhoff/repos/libra
 
+JAVA_OPTS=-D mapred.child.java.opts=-Xmx32768M -D mapreduce.reduce.shuffle.input.buffer.percent=0.20 -D yarn.scheduler.minimum-allocation-mb=2048
+
 # Index
-LIBRA_CMD="hadoop jar $LIBRA_DIR/dist/libra-all.jar -D mapred.child.java.opts=-Xmx$MEM -D mapreduce.reduce.shuffle.input.buffer.percent=0.20 preprocess \
+LIBRA_CMD="hadoop jar $LIBRA_DIR/dist/libra-all.jar $JAVA_OPTS preprocess \
 -k $KMER_SIZE \
 -t $NUM_TASKS \
 -f $FILTER_ALG \
