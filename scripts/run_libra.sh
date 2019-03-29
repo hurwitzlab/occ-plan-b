@@ -16,7 +16,7 @@ DONE_FILE=$TMP_DIR/$JOB_ID.done
 OUT_DIR=/user/mbomhoff/occ
 LIBRA_DIR=/home/mbomhoff/repos/libra
 
-JAVA_OPTS=-D mapred.child.java.opts=-Xmx32768M -D mapreduce.reduce.shuffle.input.buffer.percent=0.20 -D yarn.scheduler.minimum-allocation-mb=2048
+JAVA_OPTS="-D mapred.child.java.opts=-Xmx32768M -D mapreduce.reduce.shuffle.input.buffer.percent=0.20 -D yarn.scheduler.minimum-allocation-mb=4096 -D mapreduce.map.memory.mb=2048 -D mapreduce.reduce.memory.mb=2048"
 
 # Index
 LIBRA_CMD="hadoop jar $LIBRA_DIR/dist/libra-all.jar $JAVA_OPTS preprocess \
