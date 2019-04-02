@@ -9,7 +9,7 @@ const requestp = require('request-promise');
 const config = require('../../config.json');
 
 const STATUS = {
-    CREATED:         "CREATED",         // Created/queued
+    QUEUED:          "QUEUED",         // Created/queued
     STAGING_INPUTS:  "STAGING_INPUTS",  // Transferring input files from IRODS to HDFS
     RUNNING:         "RUNNING",         // Running on Hadoop
     ARCHIVING:       "ARCHIVING",       // Transferring output files from HDFS to IRODS
@@ -18,7 +18,7 @@ const STATUS = {
     STOPPED:         "STOPPED"          // Cancelled due to server restart
 }
 
-const MAX_JOBS_RUNNING = 2;
+const MAX_JOBS_RUNNING = config.maxNumRunningJobs || 4;
 
 class Job {
     constructor(props) {
@@ -31,7 +31,7 @@ class Job {
         this.endTime = props.endTime;
         this.inputs = props.inputs || {};
         this.parameters = props.parameters || {};
-        this.status = props.status || STATUS.CREATED;
+        this.status = props.status || STATUS.QUEUED;
         this.stagingPath = config.remoteStagingPath + '/' + this.id;
         this.targetPath = config.remoteTargetPath + '/' + this.id;
         this.mainLogFile = config.remoteStagingPath + '/libra.log';
@@ -85,14 +85,11 @@ class Job {
                       var irodsPath = '/iplant/home' + path;
                       var runStagingScript = () => remote_command('sh ' + stageScript + ' "'+ irodsPath + '" ' + this.id + ' ' + stagingPath + ' ' + targetPath + ' 2>&1 | tee -a ' + this.mainLogFile + ' ' + this.jobLogFile);
 
-                      // Share input path with "imicrobe" (skip for /iplant/home/shared paths)
-                      if (irodsPath.startsWith('/iplant/home/shared')) {
-                          promises.push( runStagingScript );
-                      }
-                      else {
-                          promises.push( () => sharePath(self.token, path, "READ", true) );
-                          promises.push( runStagingScript );
-                      }
+                      // Share input path (or parent path if input file) with "imicrobe" (skip for /iplant/home/shared paths)
+                      if (!irodsPath.startsWith('/iplant/home/shared'))
+                          promises.push( () => sharePath(self.token, pathlib.dirname(path), "READ", true) );
+
+                      promises.push( runStagingScript );
                   });
             });
         }
@@ -251,19 +248,15 @@ class JobManager {
         var jobs = await self.getActiveJobs();
         if (jobs && jobs.length) {
             var numJobsRunning = jobs.reduce( (sum, value) => {
-                if (value.status == STATUS.RUNNING)
+                if (value.status == STATUS.STAGING_INPUTS || value.status == STATUS.RUNNING)
                     return sum + 1
                 else return sum;
-            } );
+            }, 0 );
 
-            await jobs.forEach(
-                async job => {
-                    //console.log("update: job " + job.id + " is " + job.status);
-                    if (numJobsRunning >= MAX_JOBS_RUNNING)
-                        return;
-
-                    if (job.status == STATUS.CREATED) {
-                        console.log
+            jobs.forEach(
+                job => {
+//                    console.log("update: job " + job.id + " is " + job.status + " numRunning=" + numJobsRunning);
+                    if (numJobsRunning < MAX_JOBS_RUNNING && job.status == STATUS.QUEUED) {
                         self.runJob(job);
                         numJobsRunning++;
                     }
