@@ -53,7 +53,7 @@ module.exports = function(app, jobManager) {
         var jobs = await jobManager.getJobs(request.auth.profile.username);
         if (jobs) {
             jobs = jobs.map(j => {
-                j.inputs = arrayify(j.inputs);
+                j.inputs = j.inputs;
                 j.owner = j.username;
                 return j;
             });
@@ -74,7 +74,6 @@ module.exports = function(app, jobManager) {
             if (!job)
                 throw(ERR_NOT_FOUND);
 
-            job.inputs = arrayify(job.inputs);
             job.owner = job.username;
             response.json({
                 status: "success",
@@ -94,10 +93,9 @@ module.exports = function(app, jobManager) {
             if (!job)
                 throw(ERR_NOT_FOUND);
 
-            //var history = arrayify(job.history); // TODO
             response.json({
                 status: "success",
-                result: []
+                result: [] //TODO
             });
         }
         catch(error) {
@@ -201,15 +199,4 @@ function getAgaveProfile(token) {
         },
         json: true
     });
-}
-
-function arrayify(obj) {
-    var newObj = {};
-    Object.keys(obj).forEach(prop => {
-        if (Array.isArray(obj))
-            newObj[prop] = obj[prop];
-        else
-            newObj[prop] = [ obj[prop] ];
-    });
-    return newObj;
 }
