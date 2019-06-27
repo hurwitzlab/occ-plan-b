@@ -53,8 +53,10 @@ module.exports = function(app, jobManager) {
         var jobs = await jobManager.getJobs(request.auth.profile.username);
         if (jobs) {
             jobs = jobs.map(j => {
-                j.inputs = j.inputs;
+                delete j.inputs;
+                delete j.parameters;
                 j.owner = j.username;
+
                 return j;
             });
         }
