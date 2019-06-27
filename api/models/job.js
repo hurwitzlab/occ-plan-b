@@ -9,7 +9,7 @@ const requestp = require('request-promise');
 const config = require('../../config.json');
 
 const STATUS = {
-    QUEUED:          "QUEUED",         // Created/queued
+    CREATED:         "CREATED",         // Created/queued
     STAGING_INPUTS:  "STAGING_INPUTS",  // Transferring input files from IRODS to HDFS
     RUNNING:         "RUNNING",         // Running on Hadoop
     ARCHIVING:       "ARCHIVING",       // Transferring output files from HDFS to IRODS
@@ -31,7 +31,7 @@ class Job {
         this.endTime = props.endTime;
         this.inputs = props.inputs || {};
         this.parameters = props.parameters || {};
-        this.status = props.status || STATUS.QUEUED;
+        this.status = props.status || STATUS.CREATED;
         this.stagingPath = config.remoteStagingPath + '/' + this.id;
         this.targetPath = config.remoteTargetPath + '/' + this.id;
         this.mainLogFile = config.remoteStagingPath + '/libra.log';
@@ -256,7 +256,7 @@ class JobManager {
             jobs.forEach(
                 job => {
 //                    console.log("update: job " + job.id + " is " + job.status + " numRunning=" + numJobsRunning);
-                    if (numJobsRunning < MAX_JOBS_RUNNING && job.status == STATUS.QUEUED) {
+                    if (numJobsRunning < MAX_JOBS_RUNNING && job.status == STATUS.CREATED) {
                         self.runJob(job);
                         numJobsRunning++;
                     }
