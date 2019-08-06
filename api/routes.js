@@ -67,7 +67,6 @@ module.exports = function(app, jobManager) {
         });
     });
 
-//    app.get('/jobs/:id(\\S+)', async (request, response) => {
     app.get('/jobs/:id([\\w\\-]+)', async (request, response) => {
         requireAuth(request);
 
@@ -103,6 +102,13 @@ module.exports = function(app, jobManager) {
         catch(error) {
             errorHandler(error, request, response);
         };
+    });
+
+    app.post('/jobs/:id([\\w\\-]+)/pems/:username([\\w\\-]+)', async (request, response) => {
+        // Empty stub -- all jobs are public
+        response.json({
+            status: "success",
+        });
     });
 
     app.post('/jobs', async (request, response) => {
