@@ -1,4 +1,4 @@
-A mock Agave API access node for testing and developing Hadoop apps on a private cluster.
+A mock Agave API access node for deploying apps and VMs to remote clusters.
 
 Setup
 =====
