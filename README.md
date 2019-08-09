@@ -5,7 +5,7 @@ Setup
 
 Setup database:
 ```
-cat occ-plan-b.sql | sqlite3 occ-plan-b.sqlite3
+cat db.sql | sqlite3 db.sqlite3
 ```
 
 Modify configuration:
@@ -29,6 +29,6 @@ nodemon server.js
 For production:
 ```
 sudo npm install pm2@latest -g
-pm2 start --name occ-plan-b server.js
+pm2 start --name plan-b server.js
 sudo pm2 startup systemd
 ```

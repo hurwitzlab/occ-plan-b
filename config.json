@@ -6,7 +6,7 @@
     "remoteTargetPath": "/user/mbomhoff/occ",
     "agaveFilesUrl": "https://agave.iplantc.org/files/v2/",
     "archivePath": "archive/jobs",
-    "dbFilePath": "./occ-plan-b.sqlite3",
+    "dbFilePath": "./db.sqlite3",
     "maxNumRunningJobs": 1,
     "apps": {
         "libra-1.0": {
