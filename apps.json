@@ -1,0 +1,172 @@
+{
+  "libra-1.0": {
+    "id": "libra-1.0",
+    "name": "libra-1.0",
+    "version": "1.0",
+    "shortDescription": "Compute similarity between large metagenomic samples. Important note: this app requires that you have read-write access to the input path or share it with the 'imicrobe' user.",
+    "helpURI": "https://github.com/iychoi/libra",
+    "inputs": [
+      {
+        "id": "IN_DIR",
+        "details": {
+          "label": "Directory or list of input files",
+          "description": "FASTA/FASTQ formats supported"
+        },
+        "value": {
+          "order": 0,
+          "required": true,
+          "default": ""
+        },
+        "semantics": {
+          "fileTypes": [ "fasta" ],
+          "ontology": [ "syndicate" ]
+        }
+      }
+    ],
+    "parameters": [
+      {
+        "id": "KMER_SIZE",
+        "details": {
+          "label": "Kmer size",
+          "description": "",
+          "argument": "-k",
+          "showArgument": true
+        },
+        "value": {
+          "order": 0,
+          "type": "number",
+          "required": false,
+          "default": "20"
+        }
+      },
+      {
+        "id": "NUM_TASKS",
+        "details": {
+          "label": "Number of tasks (reducers)",
+          "description": "",
+          "argument": "-t",
+          "showArgument": true
+        },
+        "value": {
+          "order": 1,
+          "type": "number",
+          "required": false,
+          "default": "30"
+        }
+      },
+      {
+        "id": "MIN_GROUP_SIZE",
+        "details": {
+          "label": "Minimum size of group in bytes",
+          "description": "",
+          "argument": "-s",
+          "showArgument": true
+        },
+        "value": {
+          "order": 2,
+          "type": "number",
+          "required": false,
+          "visible": false,
+          "default": "10GB"
+        }
+      },
+      {
+        "id": "MAX_NUM_GROUPS",
+        "details": {
+          "label": "Maximum number of groups",
+          "description": "",
+          "argument": "-g",
+          "showArgument": true
+        },
+        "value": {
+          "order": 3,
+          "type": "number",
+          "required": false,
+          "visible": false,
+          "default": "20"
+        }
+      },
+      {
+        "id": "FILTER_ALG",
+        "details": {
+          "label": "Kmer filter algorithm",
+          "description": "",
+          "argument": "-f",
+          "showArgument": true
+        },
+        "value": {
+          "order": 5,
+          "type": "enumeration",
+          "required": false,
+          "default": "NOTUNIQUE",
+          "enum_values": [
+            { "NOTUNIQUE": "Not unique" },
+            { "STDDEV": "Standard deviation" },
+            { "STDDEV2": "Two's standard deviation" },
+            { "NONE": "None" }
+          ]
+        }
+      },
+      {
+        "id": "RUN_MODE",
+        "details": {
+          "label": "Run mode",
+          "description": "",
+          "argument": "-m",
+          "showArgument": true
+        },
+        "value": {
+          "order": 6,
+          "type": "enumeration",
+          "required": true,
+          "visible": false,
+          "default": "MAP",
+          "enum_values": [
+            { "MAP": "MAP" },
+            { "REDUCE": "REDUCE" }
+          ]
+        }
+      },
+      {
+        "id": "WEIGHTING_ALG",
+        "details": {
+          "label": "Weighting algorithm",
+          "description": "",
+          "argument": "-w",
+          "showArgument": true
+        },
+        "value": {
+          "order": 7,
+          "type": "enumeration",
+          "required": false,
+          "default": "LOGALITHM",
+          "enum_values": [
+            { "LOGALITHM": "Logarithm" },
+            { "BOOLEAN": "Boolean" },
+            { "NATURAL": "Natural" }
+          ]
+        }
+      },
+      {
+        "id": "SCORING_ALG",
+        "details": {
+          "label": "Scoring algorithm",
+          "description": "",
+          "argument": "-s",
+          "showArgument": true
+        },
+        "value": {
+          "order": 8,
+          "type": "enumeration",
+          "required": false,
+          "default": "COSINESIMILARITY",
+          "enum_values": [
+            { "COSINESIMILARITY": "Cosine Similarity" },
+            { "BRAYCURTIS": "Bray-Curtis" },
+            { "JENSENSHANNON": "Jensen-Shannon" }
+          ]
+        }
+      }
+    ]
+  }
+}

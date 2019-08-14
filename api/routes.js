@@ -5,6 +5,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const requestp = require('request-promise');
 const config = require('../config.json');
+const apps = config.apps ? require(config.apps) : {};
 
 // Create error types
 class MyError extends Error {
@@ -31,7 +32,6 @@ module.exports = function(app, jobManager) {
         requireAuth(request);
 
         var id = request.params.id;
-        var apps = config.apps;
 
         if (typeof apps[id] === 'undefined') {
             response.json({

@@ -4,14 +4,14 @@ echo "Started Libra" `date`
 
 JOB_ID=$1
 IN_DIR=$2
-KMER_SIZE=$3
-NUM_TASKS=$4
-FILTER_ALG=$5
-RUN_MODE=$6
-WEIGHTING_ALG=$7
-SCORING_ALG=$8
+TMP_DIR=$3
+KMER_SIZE=$4
+NUM_TASKS=$5
+FILTER_ALG=$6
+RUN_MODE=$7
+WEIGHTING_ALG=$8
+SCORING_ALG=$9
 
-TMP_DIR=/tmp/occ
 DONE_FILE=$TMP_DIR/$JOB_ID.done
 OUT_DIR=/user/mbomhoff/occ
 LIBRA_DIR=/home/mbomhoff/repos/libra

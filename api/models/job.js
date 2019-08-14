@@ -73,24 +73,21 @@ class Job {
         promises.push( () => remote_command('mkdir -p ' + this.stagingPath + ' && touch ' + this.jobLogFile) );
 
         if (this.inputs) {
-            Object.values(this.inputs).forEach( pathStr => { // In reality there will only be one input for Libra
-                var paths = pathStr.split(";");
+            let inputs = Object.values(this.inputs).flat();
+            inputs.forEach( path => { // In reality there will only be one input for Libra, the IN_DIR input
+                console.log('Job ' + this.id + ': staging input: ' + path);
 
-                paths.forEach( path => {
-                    console.log('Job ' + this.id + ': staging input: ' + path);
+                if (path.startsWith('hsyn:///')) // file is already present via Syndicate mount // TODO find a way to indicate this in job definition
+                    return;
 
-                    if (path.startsWith('hsyn:///')) // file is already present via Syndicate mount // TODO find a way to indicate this in job definition
-                        return;
+                  var irodsPath = '/iplant/home' + path;
+                  var runStagingScript = () => remote_command('sh ' + stageScript + ' "'+ irodsPath + '" ' + this.id + ' ' + stagingPath + ' ' + targetPath + ' 2>&1 | tee -a ' + this.mainLogFile + ' ' + this.jobLogFile);
 
-                      var irodsPath = '/iplant/home' + path;
-                      var runStagingScript = () => remote_command('sh ' + stageScript + ' "'+ irodsPath + '" ' + this.id + ' ' + stagingPath + ' ' + targetPath + ' 2>&1 | tee -a ' + this.mainLogFile + ' ' + this.jobLogFile);
+                  // Share input path (or parent path if input file) with "imicrobe" (skip for /iplant/home/shared paths)
+                  if (!irodsPath.startsWith('/iplant/home/shared'))
+                      promises.push( () => sharePath(self.token, pathlib.dirname(path), "READ", true) );
 
-                      // Share input path (or parent path if input file) with "imicrobe" (skip for /iplant/home/shared paths)
-                      if (!irodsPath.startsWith('/iplant/home/shared'))
-                          promises.push( () => sharePath(self.token, pathlib.dirname(path), "READ", true) );
-
-                      promises.push( runStagingScript );
-                  });
+                  promises.push( runStagingScript );
             });
         }
 
@@ -108,15 +105,15 @@ class Job {
 
         var targetPath = this.targetPath + '/data/';
         var inputPath;
-        if (this.inputs.IN_DIR.startsWith('hsyn:///')) // Syndicate mount
-            inputPath = this.inputs.IN_DIR;
+        if (this.inputs.IN_DIR[0].startsWith('hsyn:///')) // Syndicate mount
+            inputPath = this.inputs.IN_DIR[0];
         else // Staged data from Data Store
             inputPath = targetPath;// + pathlib.basename(this.inputs.IN_DIR);
 
         // Copy job execution script to remote system
         remote_copy('./scripts/run_libra.sh');
         var runScript = config.remoteStagingPath + '/run_libra.sh';
-        return remote_command('sh ' + runScript + ' ' + this.id + ' ' + inputPath + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' ' + SCORING_ALG + ' 2>&1 | tee -a ' + this.mainLogFile + ' ' + this.jobLogFile);
+        return remote_command('sh ' + runScript + ' ' + this.id + ' ' + inputPath + ' ' + config.remoteStagingPath + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' ' + SCORING_ALG + ' 2>&1 | tee -a ' + this.mainLogFile + ' ' + this.jobLogFile);
     }
 
     archive() {
@@ -334,7 +331,7 @@ function sharePath(token, path, permission, recursive) {
 //              throw(new Error("Agave permissions request failed"));
 //          });
 
-    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -d "username=imicrobe&permission=' + permission + '&recursive=' + recursive + '" ' + url);
+    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -d "username=imicrobe&permission=' + permission + '&recursive=' + recursive + '" ' + '"' + url + '"');
 }
 
 //function getPermissions(token, path) {
