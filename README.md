@@ -14,11 +14,6 @@ Edit config.json accordingly.  Make sure SSH public key is installed on target H
 
 Running
 =======
-To try out:
-```
-npm install
-npm start
-```
 
 For development:
 ```
