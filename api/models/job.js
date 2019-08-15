@@ -73,7 +73,8 @@ class Job {
         promises.push( () => remote_command('mkdir -p ' + this.stagingPath + ' && touch ' + this.jobLogFile) );
 
         if (this.inputs) {
-            let inputs = Object.values(this.inputs).flat();
+            //let inputs = Object.values(this.inputs).flat();
+            let inputs = Object.values(this.inputs).reduce((acc, val) => acc.concat(val), []);
             inputs.forEach( path => { // In reality there will only be one input for Libra, the IN_DIR input
                 console.log('Job ' + this.id + ': staging input: ' + path);
 
