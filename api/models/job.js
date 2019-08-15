@@ -81,11 +81,11 @@ class Job {
                     return;
 
                   var irodsPath = '/iplant/home' + path;
-                  var runStagingScript = () => remote_command('sh ' + stageScript + ' "'+ irodsPath + '" ' + this.id + ' ' + stagingPath + ' ' + targetPath + ' 2>&1 | tee -a ' + this.mainLogFile + ' ' + this.jobLogFile);
+                  var runStagingScript = () => remote_command('bash ' + stageScript + ' "'+ irodsPath + '" ' + this.id + ' ' + stagingPath + ' ' + targetPath + ' 2>&1 | tee -a ' + this.mainLogFile + ' ' + this.jobLogFile);
 
                   // Share input path (or parent path if input file) with "imicrobe" (skip for /iplant/home/shared paths)
                   if (!irodsPath.startsWith('/iplant/home/shared'))
-                      promises.push( () => sharePath(self.token, pathlib.dirname(path), "READ", true) );
+                      promises.push( () => sharePath(self.token, path/*pathlib.dirname(path)*/, "READ", true) );
 
                   promises.push( runStagingScript );
             });
@@ -102,6 +102,7 @@ class Job {
         var RUN_MODE = this.parameters.RUN_MODE || "map";
         var WEIGHTING_ALG = this.parameters.WEIGHTING_ALG || "LOGALITHM";
         var SCORING_ALG = this.parameters.SCORING_ALG || "COSINESIMILARITY";
+        var JAVA_OPTS = config.javaOpts || "";
 
         var targetPath = this.targetPath + '/data/';
         var inputPath;
@@ -113,13 +114,13 @@ class Job {
         // Copy job execution script to remote system
         remote_copy('./scripts/run_libra.sh');
         var runScript = config.remoteStagingPath + '/run_libra.sh';
-        return remote_command('sh ' + runScript + ' ' + this.id + ' ' + inputPath + ' ' + config.remoteStagingPath + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' ' + SCORING_ALG + ' 2>&1 | tee -a ' + this.mainLogFile + ' ' + this.jobLogFile);
+        return remote_command('sh ' + runScript + ' ' + this.id + ' ' + inputPath + ' ' + config.remoteStagingPath + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' ' + SCORING_ALG + ' ' + JAVA_OPTS + ' 2>&1 | tee -a ' + this.mainLogFile + ' ' + this.jobLogFile);
     }
 
     archive() {
         var self = this;
         var archivePath = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
-        return remote_command('iput -KTr ' + this.stagingPath + ' ' + archivePath)
+        return remote_command('iput -Tr ' + this.stagingPath + ' ' + archivePath) // removed -K checksum bc hanging on node0
             .then( () =>
                 remote_command('ichmod -r own ' + this.username + ' ' + archivePath)
             );

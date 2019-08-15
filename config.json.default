@@ -4,6 +4,7 @@
     "remoteUsername": "",
     "remoteStagingPath": "",
     "remoteTargetPath": "",
+    "javaOpts": "",
     "agaveFilesUrl": "https://agave.iplantc.org/files/v2/",
     "archivePath": "archive/jobs",
     "dbFilePath": "./db.sqlite3",

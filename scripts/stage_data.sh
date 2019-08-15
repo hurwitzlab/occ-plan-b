@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #set -x
 set -e
 
@@ -7,11 +7,13 @@ JOB_ID=$2
 STAGING_PATH=$3
 HDFS_PATH=$4
 
+HDFS=/opt/hadoop/bin/hdfs
+
 echo "Started Staging Data" `date`
 echo $0 $@
 
 mkdir -p $STAGING_PATH
-hdfs dfs -mkdir -p $HDFS_PATH
+$HDFS dfs -mkdir -p $HDFS_PATH
 
 filelist=`ils $IRODS_PATH | sed -n '1!p'`
 if [[ "$filelist" = "" ]]; then
@@ -47,7 +49,7 @@ do
     fi
 
     echo "Copying to HDFS" $f
-    hdfs dfs -put -f $STAGING_PATH/$f $HDFS_PATH
+    $HDFS dfs -put -f $STAGING_PATH/$f $HDFS_PATH
 
     rm $STAGING_PATH/$f
 done || exit 1
