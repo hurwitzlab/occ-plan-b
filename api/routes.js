@@ -57,6 +57,10 @@ module.exports = function(app, jobManager) {
                 delete j.parameters;
                 j.owner = j.username;
 
+                // Alias start/end times for consistency with Tapis/Aloe
+                j.created = j.startTime;
+                j.ended = j.endTime;
+
                 return j;
             });
         }
@@ -76,6 +80,11 @@ module.exports = function(app, jobManager) {
                 throw(ERR_NOT_FOUND);
 
             job.owner = job.username;
+
+            // Alias start/end times for consistency with Tapis/Aloe
+            job.created = job.startTime;
+            job.ended = job.endTime;
+
             response.json({
                 status: "success",
                 result: job
