@@ -66,7 +66,7 @@ class Job {
 
         // Share output path with "imicrobe"
         var homePath = '/' + this.username
-        promises.push( () => sharePath(self.token, homePath, "READ", false) ); // Need to share home path for sharing within home path to work
+        promises.push( () => sharePath(self.token, homePath, "READ", true) ); // Need to share home path for sharing within home path to work
         var archivePath = homePath + '/' + config.archivePath
         promises.push( () => remote_make_directory(self.token, archivePath) ); // Create archive path in case it doesn't exist yet (new user)
         promises.push( () => sharePath(self.token, archivePath, "READ_WRITE", false) );
