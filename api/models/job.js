@@ -66,7 +66,7 @@ class Job {
 
         // Share output path with "imicrobe"
         var homePath = '/' + this.username
-        promises.push( () => sharePath(self.token, homePath, "READ", true) ); // Need to share home path for sharing within home path to work
+        promises.push( () => sharePath(self.token, homePath, "READ", false) ); // Need to share home path for sharing within home path to work
         var archivePath = homePath + '/' + config.archivePath
         promises.push( () => remote_make_directory(self.token, archivePath) ); // Create archive path in case it doesn't exist yet (new user)
         promises.push( () => sharePath(self.token, archivePath, "READ_WRITE", false) );
@@ -167,7 +167,7 @@ class JobManager {
 
         const job = await this.db.getJob(id);
 
-        if (!job || (username && job.username != username))
+        if (!job || (username && job.username != username && username != "imicrobe"))
             return;
 
         return self.createJob(job);
@@ -177,10 +177,10 @@ class JobManager {
         var self = this;
         var jobs;
 
-        if (username)
-            jobs = await this.db.getJobsForUser(username);
-        else
+        if (!username || username == "imicrobe") // let user "imicrobe" see all jobs for all users
             jobs = await this.db.getJobs();
+        else
+            jobs = await this.db.getJobsForUser(username);
 
         return jobs.map( job => { return self.createJob(job) } );
     }
