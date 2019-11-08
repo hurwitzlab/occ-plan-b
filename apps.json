@@ -5,6 +5,10 @@
     "version": "1.0",
     "shortDescription": "Compute similarity between large metagenomic samples. Important note: this app requires that you have read-write access to the input path or share it with the 'imicrobe' user.",
     "helpURI": "https://github.com/iychoi/libra",
+    "deploymentPath": "",
+    "deploymentSystem": "",
+    "executionSystem": "t01.testrack.hpc.arizona.edu",
+    "executionType": "hadoop",
     "inputs": [
       {
         "id": "IN_DIR",
@@ -168,5 +172,164 @@
         }
       }
     ]
+  },
+  "centrifuge-1.0.4u2": {
+    "name": "centrifuge",
+    "version": "1.0.4",
+    "shortDescription": "Classifier for metagenomic sequences",
+    "longDescription": "Centrifuge is a microbial classification engine that enables rapid, accurate and sensitive labeling of reads and quantification of species on desktop computers. The system uses a indexing scheme based on the Burrows-Wheeler transform (BWT) and the Ferragina-Manzini (FM) index optimized specifically for the metagenomic classification problem. Centrifuge requires a relatively small index (5.8 GB for all complete bacterial and viral genomes plus the human genome) and classifies sequences at a very high speed, allowing it to process the millions of reads from a typical high-throughput DNA sequencing run within a few minutes. Together these advances enable timely and accurate analysis of large metagenomics data sets on conventional desktop computers.",
+    "helpURI": "https://ccb.jhu.edu/software/centrifuge/manual.shtml",
+    "deploymentPath": "/iplant/home/mbomhoff/applications/centrifuge-1.0.4/plan-b",
+    "deploymentSystem": "data.iplantcollaborative.org",
+    "executionSystem": "lytic.hpc.arizona.edu",
+    "executionType": "SERVER",
+    "inputs": [
+        {
+            "id": "QUERY",
+            "value": {
+                "default": "",
+                "order": 0,
+                "validator": "",
+                "required": true,
+                "visible": true,
+                "enquote": false
+            },
+            "semantics": {
+                "ontology": [
+                    "http://sswapmeet.sswap.info/mime/application/X-bam"
+                ],
+                "minCardinality": 1,
+                "maxCardinality": -1,
+                "fileTypes": [
+                    "raw-0"
+                ]
+            },
+            "details": {
+                "description": "",
+                "label": "Input files or directories",
+                "argument": "-q ",
+                "repeatArgument": true,
+                "showArgument": true
+            }
+        }
+    ],
+    "parameters": [
+        {
+            "id": "INDEX",
+            "value": {
+                "default": "p_compressed+h+v",
+                "type": "enumeration",
+                "order": 1,
+                "required": false,
+                "visible": true,
+                "enquote": false,
+                "enumValues": [
+                    {
+                        "p_compressed+h+v": "Bacteria, Archaea, Viruses, Human (compressed)"
+                    },
+                    {
+                        "p_compressed": "Bacteria, Archaea (compressed)"
+                    },
+                    {
+                        "p+h+v": "Bacteria, Archaea, Viruses, Human"
+                    },
+                    {
+                        "nt": "NCBI nucleotide non-redundant sequences"
+                    }
+                ]
+            },
+            "details": {
+                "description": "Index to use for classification",
+                "label": "Index name",
+                "argument": "-i ",
+                "repeatArgument": false,
+                "showArgument": true
+            }
+        },
+        {
+            "id": "EXCLUDE_TAXIDS",
+            "value": {
+                "default": "",
+                "type": "string",
+                "order": 2,
+                "required": false,
+                "visible": true,
+                "enquote": true,
+                "validator": ""
+            },
+            "details": {
+                "description": "NCBI Taxon IDs that are excluded from output and abundance calculations",
+                "label": "Exclude Tax IDs",
+                "argument": "-x ",
+                "repeatArgument": false,
+                "showArgument": true
+            }
+        },
+        {
+            "id": "FORMAT",
+            "value": {
+                "default": "fasta",
+                "type": "enumeration",
+                "order": 3,
+                "required": false,
+                "visible": true,
+                "enquote": false,
+                "enumValues": [
+                    {
+                        "fasta": "FASTA"
+                    },
+                    {
+                        "fastq": "FASTQ"
+                    }
+                ]
+            },
+            "details": {
+                "description": "FASTA (default) or FASTQ",
+                "label": "File format",
+                "argument": "-f ",
+                "repeatArgument": false,
+                "showArgument": true
+            }
+        },
+        {
+            "id": "READS_ARE_PAIRED",
+            "value": {
+                "default": false,
+                "type": "flag",
+                "order": 4,
+                "required": false,
+                "visible": true,
+                "enquote": false,
+                "validator": ""
+            },
+            "details": {
+                "description": "Find forward/reverse reads with 1/2 in names",
+                "label": "Reads are paired",
+                "argument": "-r",
+                "repeatArgument": false,
+                "showArgument": true
+            }
+        },
+        {
+            "id": "FIGURE_TITLE",
+            "value": {
+                "default": "Species abundance by sample",
+                "type": "string",
+                "order": 5,
+                "required": false,
+                "visible": true,
+                "enquote": true,
+                "validator": ""
+            },
+            "details": {
+                "description": "Title for bubble chart",
+                "label": "Figure title",
+                "argument": "-T ",
+                "repeatArgument": false,
+                "showArgument": true
+            }
+        }
+    ],
+    "outputs": []
   }
 }
