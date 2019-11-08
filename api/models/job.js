@@ -1,12 +1,14 @@
 const dblib = require('../db.js');
 const Promise = require('bluebird');
 const sequence = require('promise-sequence');
-const spawn = require('child_process').spawnSync;
-const execFile = require('child_process').execFile;
+const process = require('child_process');
 const pathlib = require('path');
 const shortid = require('shortid');
 const requestp = require('request-promise');
-const config = require('../../config.json');
+
+const config = require('../../config.json'); // FIXME pass in
+const apps = require('../../apps.json'); //config.apps ? require(config.apps) : {}; //FIXME pass in
+const systems = require('../../systems.json'); //config.systems ? require(config.systems) : {}; //FIXME pass in
 
 const STATUS = {
     CREATED:         "CREATED",         // Created/queued
@@ -21,6 +23,109 @@ const STATUS = {
 const MAX_JOBS_RUNNING = config.maxNumRunningJobs || 4;
 
 class Job {
+    constructor(props) {
+        this.id = props.id || 'planb-' + shortid.generate();
+        this.username = props.username; // CyVerse username of user running the job
+        this.token = props.token;
+        this.name = props.name;
+        this.appId = props.appId;
+        this.startTime = props.startTime;
+        this.endTime = props.endTime;
+        this.inputs = props.inputs || {};
+        this.parameters = props.parameters || {};
+        this.status = props.status || STATUS.CREATED;
+
+        this.app = apps[this.appId];
+        //if (!this.app) {} //TODO
+
+        let system = systems[this.app.executionSystem];
+        //if (!system) {} //TODO
+        this.system = new ExecutionSystem(system);
+
+        this.deploymentPath = this.app.deploymentPath;
+        this.stagingPath = system.stagingPath + '/' + this.id;
+        this.mainLogFile = system.stagingPath + '/jobs.log';
+        this.jobLogFile = this.stagingPath + '/job.log';
+
+        if (system.type == "hadoop") {
+            this.targetPath = system.targetHdfsPath + '/' + this.id;
+        }
+    }
+
+    setStatus(newStatus) {
+        if (this.status == newStatus)
+            return;
+
+        this.status = newStatus;
+
+        // TODO
+//        this.history.push({
+//            created: dblib.getTimestamp(),
+//            createdBy: this.username,
+//            description: "",
+//            status: newStatus
+//        });
+    }
+
+    async stageInputs() {
+        var self = this;
+        var dataStagingPath = this.stagingPath + '/data/';
+        //var stageScript = config.remoteStagingPath + '/stage_data.sh';
+
+        // Make sure staging area exists
+        let rc = await this.system.execute(['mkdir -p', dataStagingPath])
+
+        // Download app to staging area
+        rc = await this.system.execute(['iget -Tr', this.deploymentPath, this.stagingPath]);
+
+        // Share output path with "imicrobe"
+        var homePath = '/' + this.username
+        rc = await sharePath(self.token, homePath, "READ", false); // Need to share home path for sharing within home path to work
+        var archivePath = homePath + '/' + config.archivePath
+        rc = await agave_mkdir(self.token, archivePath); // Create archive path in case it doesn't exist yet (new user)
+        rc = await sharePath(self.token, archivePath, "READ_WRITE", false);
+
+        // Create log file
+        rc = await this.system.execute(['mkdir -p', this.stagingPath, '&& touch', this.jobLogFile]);
+
+        if (this.inputs) {
+            let inputs = Object.values(this.inputs).reduce((acc, val) => acc.concat(val), []);
+            for (let path of inputs) {
+                console.log('Job ' + this.id + ': staging input: ' + path);
+                  var irodsPath = '/iplant/home' + path;
+                  rc = await this.system.execute(['iget -Tr', irodsPath, dataStagingPath]);
+
+                  // Share input path (or parent path if input file) with "imicrobe" (skip for /iplant/home/shared paths)
+//                  if (!irodsPath.startsWith('/iplant/home/shared'))
+//                      promises.push( () => sharePath(self.token, path/*pathlib.dirname(path)*/, "READ", true) );
+            }
+        }
+    }
+
+    async run() {
+        let params = [];
+        for (let id in this.inputs) {
+            let arg = this.app.inputs.filter(inp => inp.id == id)[0].details.argument;
+            let val = this.inputs[id].join(' ');
+            params.push(arg + ' ' + val);
+        }
+
+        let subdir = this.deploymentPath.match(/([^\/]*)\/*$/)[1]; //*/
+        let runScript = this.stagingPath + '/' + subdir + '/run.sh';
+        let rc = await this.system.execute(['sh', runScript, params.join(' ')]);
+    }
+
+    archive() {
+        var self = this;
+        var archivePath = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
+        return remote_command('iput -Tr ' + this.stagingPath + ' ' + archivePath) // removed -K checksum bc hanging on node0
+            .then( () =>
+                remote_command('ichmod -r own ' + this.username + ' ' + archivePath)
+            );
+    }
+}
+
+class LibraJob {
     constructor(props) {
         this.id = props.id || 'planb-' + shortid.generate();
         this.username = props.username; // CyVerse username of user running the job
@@ -225,21 +330,22 @@ class JobManager {
         await this.db.updateJob(job.id, job.status, (newStatus == STATUS.FINISHED));
     }
 
-    runJob(job) {
+    async runJob(job) {
         var self = this;
 
-        self.transitionJob(job, STATUS.STAGING_INPUTS)
-        .then( () => { return remote_command('mkdir -p ' + config.remoteStagingPath) })
-        .then( () => { return job.stageInputs() })
-        .then( () => self.transitionJob(job, STATUS.RUNNING) )
-        .then( () => { return job.runLibra() })
-        .then( () => self.transitionJob(job, STATUS.ARCHIVING) )
-        .then( () => { return job.archive() })
-        .then( () => self.transitionJob(job, STATUS.FINISHED) )
-        .catch( error => {
+        try {
+            self.transitionJob(job, STATUS.STAGING_INPUTS);
+            await job.stageInputs();
+            self.transitionJob(job, STATUS.RUNNING);
+            await job.run();
+            self.transitionJob(job, STATUS.ARCHIVING);
+//            await job.archive();
+//            self.transitionJob(job, STATUS.FINISHED);
+        }
+        catch (error) {
             console.log('runJob ERROR:', error);
             self.transitionJob(job, STATUS.FAILED);
-        });
+        }
     }
 
     async update() {
@@ -271,13 +377,54 @@ class JobManager {
     }
 }
 
-function remote_command(cmd_str) {
-    var remoteCmdStr = 'ssh ' + config.remoteUsername + '@' + config.remoteHost + ' ' + cmd_str;
+class ExecutionSystem {
+    constructor(props) {
+        this.hostname = props.hostname;
+        this.username = props.username;
+    }
+
+    execute(strOrArray) {
+        let self = this;
+
+        let cmdStr = strOrArray;
+        if (Array.isArray(strOrArray))
+            cmdStr = strOrArray.join(' ');
+
+        var remoteCmdStr = 'ssh ' + this.username + '@' + this.hostname + ' ' + cmdStr;
+        console.log("Executing remote command: " + remoteCmdStr);
+
+        return new Promise(function(resolve, reject) {
+            const child = process.execFile(
+                'ssh', [ self.username + '@' + self.hostname, cmdStr ],
+                { maxBuffer: 10 * 1024 * 1024 }, // 10mb -- was overrunning with default 200kb
+                (error, stdout, stderr) => {
+                    console.log('remote_command:stdout:', stdout);
+                    console.log('remote_command:stderr:', stderr);
+
+                    if (error) {
+                        console.log('remote_command:error:', error);
+                        reject(error);
+                    }
+                    else {
+                        resolve(stdout);
+                    }
+                }
+            );
+        });
+    }
+}
+
+function remote_command(hostname, username, strOrArray) {
+    let cmdStr = strOrArray;
+    if (Array.isArray(strOrArray))
+        cmdStr = strOrArray.join(' ');
+
+    var remoteCmdStr = 'ssh ' + username + '@' + hostname + ' ' + cmdStr;
     console.log("Executing remote command: " + remoteCmdStr);
 
     return new Promise(function(resolve, reject) {
-        const child = execFile(
-            'ssh', [ config.remoteUsername + '@' + config.remoteHost, cmd_str ],
+        const child = process.execFile(
+            'ssh', [ config.remoteUsername + '@' + config.remoteHost, cmdStr ],
             { maxBuffer: 10 * 1024 * 1024 }, // 10mb -- was overrunning with default 200kb
             (error, stdout, stderr) => {
                 console.log('remote_command:stdout:', stdout);
@@ -295,11 +442,37 @@ function remote_command(cmd_str) {
     });
 }
 
+function local_command(strOrArray) {
+    let cmdStr = strOrArray;
+    if (Array.isArray(strOrArray))
+        cmdStr = strOrArray.join(' ');
+
+    console.log("Executing local command: " + cmdStr);
+
+    return new Promise(function(resolve, reject) {
+        const child = process.exec(
+            cmdStr,
+            (error, stdout, stderr) => {
+                console.log('local_command:stdout:', stdout);
+                console.log('local_command:stderr:', stderr);
+
+                if (error) {
+                    console.log('local_command:error:', error);
+                    reject(error);
+                }
+                else {
+                    resolve(stdout);
+                }
+            }
+        );
+    });
+}
+
 function remote_copy(local_file) {
     var cmdStr = 'scp ' + local_file + ' ' + config.remoteHost + ':' + config.remoteStagingPath;
     console.log("Copying to remote: " + cmdStr);
 
-    const cmd = spawn('scp', [ local_file, config.remoteHost + ':' + config.remoteStagingPath ]);
+    const cmd = process.spawnSync('scp', [ local_file, config.remoteHost + ':' + config.remoteStagingPath ]);
     console.log( `stderr: ${cmd.stderr.toString()}` );
     console.log( `stdout: ${cmd.stdout.toString()}` );
 }
@@ -335,7 +508,7 @@ function sharePath(token, path, permission, recursive) {
 //              throw(new Error("Agave permissions request failed"));
 //          });
 
-    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -d "username=imicrobe&permission=' + permission + '&recursive=' + recursive + '" ' + '"' + url + '"');
+    return local_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -d "username=imicrobe&permission=' + permission + '&recursive=' + recursive + '" ' + '"' + url + '"');
 }
 
 //function getPermissions(token, path) {
@@ -417,10 +590,10 @@ function sharePath(token, path, permission, recursive) {
 //        });
 //}
 
-function remote_make_directory(token, dest_path) {
-    console.log("Creating remote directory", dest_path);
-    var path = pathlib.parse(dest_path);
-    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X PUT -d "action=mkdir&path=' + path.base + '" ' + config.agaveFilesUrl + 'media/' + path.dir);
+function agave_mkdir(token, destPath) {
+    console.log("Creating remote directory", destPath);
+    var path = pathlib.parse(destPath);
+    return local_command('curl -sk -H "Authorization: ' + escape(token) + '" -X PUT -d "action=mkdir&path=' + path.base + '" ' + config.agaveFilesUrl + 'media/' + path.dir);
 }
 
 function escape(str) {
