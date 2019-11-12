@@ -113,11 +113,20 @@ class Job {
         }
 
         for (let id in this.parameters) {
-            let arg = this.app.parameters.filter(param => param.id == id)[0].details.argument;
+            let param = this.app.parameters.filter(param => param.id == id)[0];
+            let arg = param.details.argument;
             let val = this.parameters[id];
+            if (val == "")
+                val = param.value.default;
             if (Array.isArray(val))
                 val = val.join(' ');
-            params.push(arg + ' ' + val);
+
+            if (param.value.type == "flag") {
+                if (val === true)
+                    params.push(arg);
+            }
+            else
+                params.push(arg + ' "' + val + '"');
         }
 
         let subdir = this.deploymentPath.match(/([^\/]*)\/*$/)[1]; //*/
