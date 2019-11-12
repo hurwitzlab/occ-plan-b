@@ -106,7 +106,17 @@ class Job {
         let params = [];
         for (let id in this.inputs) {
             let arg = this.app.inputs.filter(inp => inp.id == id)[0].details.argument;
-            let val = this.inputs[id].join(' ');
+            let val = this.inputs[id];
+            if (Array.isArray(val))
+                val = val.join(' ');
+            params.push(arg + ' ' + val);
+        }
+
+        for (let id in this.parameters) {
+            let arg = this.app.parameters.filter(param => param.id == id)[0].details.argument;
+            let val = this.parameters[id];
+            if (Array.isArray(val))
+                val = val.join(' ');
             params.push(arg + ' ' + val);
         }
 
@@ -115,13 +125,11 @@ class Job {
         let rc = await this.system.execute(['sh', runScript, params.join(' ')]);
     }
 
-    archive() {
+    async archive() {
         var self = this;
         var archivePath = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
-        return remote_command('iput -Tr ' + this.stagingPath + ' ' + archivePath) // removed -K checksum bc hanging on node0
-            .then( () =>
-                remote_command('ichmod -r own ' + this.username + ' ' + archivePath)
-            );
+        let rc = await this.system.execute(['iput -Tr', this.stagingPath + '/data', archivePath]); // removed "-K checksum" because hanging on node0
+        rc = await this.system.execute(['ichmod -r own', this.username, archivePath]);
     }
 }
 
@@ -339,8 +347,8 @@ class JobManager {
             self.transitionJob(job, STATUS.RUNNING);
             await job.run();
             self.transitionJob(job, STATUS.ARCHIVING);
-//            await job.archive();
-//            self.transitionJob(job, STATUS.FINISHED);
+            await job.archive();
+            self.transitionJob(job, STATUS.FINISHED);
         }
         catch (error) {
             console.log('runJob ERROR:', error);
