@@ -92,8 +92,9 @@ class Job {
             let inputs = Object.values(this.inputs).reduce((acc, val) => acc.concat(val), []);
             for (let path of inputs) {
                 console.log('Job ' + this.id + ': staging input: ' + path);
-                  var irodsPath = '/iplant/home' + path;
-                  rc = await this.system.execute(['iget -Tr', irodsPath, dataStagingPath]);
+                  var irodsPath = (path.startsWith('/iplant/home') ? path : '/iplant/home' + path);
+                  var targetPath = dataStagingPath + pathlib.basename(path);
+                  rc = await this.system.execute(['iget -Tr', irodsPath, targetPath]); // works for file or directory
 
                   // Share input path (or parent path if input file) with "imicrobe" (skip for /iplant/home/shared paths)
 //                  if (!irodsPath.startsWith('/iplant/home/shared'))
@@ -103,12 +104,19 @@ class Job {
     }
 
     async run() {
+        var dataStagingPath = this.stagingPath + '/data/';
+
         let params = [];
         for (let id in this.inputs) {
-            let arg = this.app.inputs.filter(inp => inp.id == id)[0].details.argument;
+            let arg = this.app.inputs.filter(inp => inp.id == id)[0].details.argument || "";
             let val = this.inputs[id];
-            if (Array.isArray(val))
+            if (Array.isArray(val)) {
+                val = val.map(v => dataStagingPath + pathlib.basename(v));
                 val = val.join(' ');
+            }
+            else if (val != "") {
+                val = dataStagingPath + pathlib.basename(val);
+            }
             params.push(arg + ' ' + val);
         }
 
@@ -136,8 +144,10 @@ class Job {
 
     async archive() {
         var self = this;
+        var dataStagingPath = this.stagingPath + '/data/';
+
         var archivePath = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
-        let rc = await this.system.execute(['iput -Tr', this.stagingPath + '/data', archivePath]); // removed "-K checksum" because hanging on node0
+        let rc = await this.system.execute(['iput -Tr', dataStagingPath, archivePath]); // removed "-K checksum" because hanging on node0
         rc = await this.system.execute(['ichmod -r own', this.username, archivePath]);
     }
 }
