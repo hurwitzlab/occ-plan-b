@@ -5,9 +5,9 @@
     "version": "1.0",
     "shortDescription": "Compute similarity between large metagenomic samples. Important note: this app requires that you have read-write access to the input path or share it with the 'imicrobe' user.",
     "helpURI": "https://github.com/iychoi/libra",
-    "deploymentPath": "",
-    "deploymentSystem": "",
-    "executionSystem": "t01.testrack.hpc.arizona.edu",
+    "deploymentPath": "/iplant/home/mbomhoff/applications/libra-1.0/plan-b",
+    "deploymentSystem": "data.iplantcollaborative.org",
+    "executionSystem": "node0.hadoop.cs.arizona.edu",
     "executionType": "hadoop",
     "inputs": [
       {
