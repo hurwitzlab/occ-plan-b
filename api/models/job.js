@@ -90,15 +90,19 @@ class Job {
 
         if (this.inputs) {
             let inputs = Object.values(this.inputs).reduce((acc, val) => acc.concat(val), []);
+
+            // First share the input paths with the "imicrobe" user
+            for (let path of inputs) {
+                if (!path.startsWith('/shared')) // Skip for paths in /iplant/home/shared
+                    rc = await sharePath(self.token, path/*pathlib.dirname(path)*/, "READ", true);
+            }
+
+            // Transfer input files
             for (let path of inputs) {
                 console.log('Job ' + this.id + ': staging input: ' + path);
                   var irodsPath = (path.startsWith('/iplant/home') ? path : '/iplant/home' + path);
                   var targetPath = dataStagingPath + pathlib.basename(path);
                   rc = await this.system.execute(['iget -Tr', irodsPath, targetPath]); // works for file or directory
-
-                  // Share input path (or parent path if input file) with "imicrobe" (skip for /iplant/home/shared paths)
-//                  if (!irodsPath.startsWith('/iplant/home/shared'))
-//                      promises.push( () => sharePath(self.token, path/*pathlib.dirname(path)*/, "READ", true) );
             }
         }
     }
@@ -139,7 +143,7 @@ class Job {
 
         let subdir = this.deploymentPath.match(/([^\/]*)\/*$/)[1]; //*/
         let runScript = this.stagingPath + '/' + subdir + '/run.sh';
-        let rc = await this.system.execute(['sh', runScript, params.join(' ')]);
+        let rc = await this.system.execute(['sh', runScript, params.join(' '), ' 2>&1 | tee -a ', this.mainLogFile, this.jobLogFile]);
     }
 
     async archive() {
