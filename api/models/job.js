@@ -1,6 +1,6 @@
 const dblib = require('../db.js');
 const Promise = require('bluebird');
-const process = require('child_process');
+const proc = require('child_process');
 const pathlib = require('path');
 const shortid = require('shortid');
 //const requestp = require('request-promise');
@@ -72,7 +72,10 @@ class Job {
         //var stageScript = config.remoteStagingPath + '/stage_data.sh';
 
         // Make sure staging area exists
-        let rc = await this.system.execute(['mkdir -p', dataStagingPath])
+        let rc = await this.system.execute(['mkdir -p', dataStagingPath]);
+
+        // Print IRODS user info for debug
+        rc = await this.system.execute(['iuserinfo']);
 
         // Download app to staging area
         rc = await this.system.execute(['iget -Tr', this.deploymentPath, this.stagingPath]);
@@ -301,6 +304,9 @@ class ExecutionSystem {
     constructor(props) {
         this.hostname = props.hostname;
         this.username = props.username;
+        this.env = {
+            IRODS_ENVIRONMENT_FILE: props.irodsEnvironmentFile || ''
+        };
     }
 
     execute(strOrArray) {
@@ -310,13 +316,14 @@ class ExecutionSystem {
         if (Array.isArray(strOrArray))
             cmdStr = strOrArray.join(' ');
 
-        var remoteCmdStr = 'ssh ' + this.username + '@' + this.hostname + ' ' + cmdStr;
-        console.log("Executing remote command: " + remoteCmdStr);
+        let envStr = Object.keys(this.env).map(key => key + "=" + this.env[key]).join(' ');
+        let args = [ self.username + '@' + self.hostname, envStr, cmdStr ];
+        console.log("Executing remote command: ssh " + args.join(' '));
 
         return new Promise(function(resolve, reject) {
-            const child = process.execFile(
-                'ssh', [ self.username + '@' + self.hostname, cmdStr ],
-                { maxBuffer: 10 * 1024 * 1024 }, // 10mb -- was overrunning with default 200kb
+            const child = proc.execFile(
+                'ssh', args,
+                { maxBuffer: 10 * 1024 * 1024 }, // 10M -- was overrunning with default 200K
                 (error, stdout, stderr) => {
                     console.log('remote_command:stdout:', stdout);
                     console.log('remote_command:stderr:', stderr);
@@ -343,7 +350,7 @@ function remote_command(hostname, username, strOrArray) {
     console.log("Executing remote command: " + remoteCmdStr);
 
     return new Promise(function(resolve, reject) {
-        const child = process.execFile(
+        const child = proc.execFile(
             'ssh', [ config.remoteUsername + '@' + config.remoteHost, cmdStr ],
             { maxBuffer: 10 * 1024 * 1024 }, // 10mb -- was overrunning with default 200kb
             (error, stdout, stderr) => {
@@ -370,7 +377,7 @@ function local_command(strOrArray) {
     console.log("Executing local command: " + cmdStr);
 
     return new Promise(function(resolve, reject) {
-        const child = process.exec(
+        const child = proc.exec(
             cmdStr,
             (error, stdout, stderr) => {
                 console.log('local_command:stdout:', stdout);
@@ -392,7 +399,7 @@ function remote_copy(local_file) {
     var cmdStr = 'scp ' + local_file + ' ' + config.remoteHost + ':' + config.remoteStagingPath;
     console.log("Copying to remote: " + cmdStr);
 
-    const cmd = process.spawnSync('scp', [ local_file, config.remoteHost + ':' + config.remoteStagingPath ]);
+    const cmd = proc.spawnSync('scp', [ local_file, config.remoteHost + ':' + config.remoteStagingPath ]);
     console.log( `stderr: ${cmd.stderr.toString()}` );
     console.log( `stdout: ${cmd.stdout.toString()}` );
 }
