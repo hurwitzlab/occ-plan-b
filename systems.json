@@ -1,0 +1,34 @@
+{
+  "node0.hadoop.cs.arizona.edu": {
+    "type": "hadoop",
+    "hostname": "node0.hadoop.cs.arizona.edu",
+    "username": "mbomhoff",
+    "stagingPath": "/disk2/imicrobe_temp",
+    "env": {
+      "IRODS_ENVIRONMENT_FILE": "/home/u20/mbomhoff/.irods/irods_environment.json.imicrobe",
+      "PATH": "/home/mbomhoff/bin"
+    },
+    "targetHdfsPath": "/user/mbomhoff/occ",
+    "hadoopJavaOpts": "-D mapred.child.java.opts=-Xmx32768M -D mapreduce.reduce.shuffle.input.buffer.percent=0.20 -D yarn.scheduler.minimum-allocation-mb=4096 -D mapreduce.map.memory.mb=2048 -D mapreduce.reduce.memory.mb=2048"
+  },
+  "t01.testrack.hpc.arizona.edu": {
+    "type": "hadoop",
+    "hostname": "t01.testrack.hpc.arizona.edu",
+    "username": "mbomhoff",
+    "stagingPath": "/tmp/occ",
+    "env": {
+      "IRODS_ENVIRONMENT_FILE": "/home/u20/mbomhoff/.irods/irods_environment.json.imicrobe"
+    },
+    "targetHdfsPath": "/user/mbomhoff/occ",
+    "hadoopJavaOpts": "-D mapred.child.java.opts=-Xmx32768M -D mapreduce.reduce.shuffle.input.buffer.percent=0.20 -D yarn.scheduler.minimum-allocation-mb=4096 -D mapreduce.map.memory.mb=2048 -D mapreduce.reduce.memory.mb=2048"
+  },
+  "lytic.hpc.arizona.edu": {
+    "type": "server",
+    "hostname": "lytic.hpc.arizona.edu",
+    "username": "mbomhoff",
+    "stagingPath": "/data/plan-b/jobs",
+    "env": {
+      "IRODS_ENVIRONMENT_FILE": "/home/u20/mbomhoff/.irods/irods_environment.json.imicrobe"
+    }
+  }
+}

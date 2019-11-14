@@ -1,13 +1,9 @@
 {
     "serverPort": 3008,
-    "remoteHost": "",
-    "remoteUsername": "",
-    "remoteStagingPath": "",
-    "remoteTargetPath": "",
-    "javaOpts": "",
     "agaveFilesUrl": "https://agave.iplantc.org/files/v2/",
     "archivePath": "archive/jobs",
     "dbFilePath": "./db.sqlite3",
-    "maxNumRunningJobs": 1,
-    "apps": "../apps.json"
+    "maxNumRunningJobs": 2,
+    "apps": "../apps.json",
+    "systems": "../systems.json"
 }

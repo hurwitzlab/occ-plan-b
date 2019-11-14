@@ -304,9 +304,7 @@ class ExecutionSystem {
     constructor(props) {
         this.hostname = props.hostname;
         this.username = props.username;
-        this.env = {
-            IRODS_ENVIRONMENT_FILE: props.irodsEnvironmentFile || ''
-        };
+        this.env = props.env || {};
     }
 
     execute(strOrArray) {
