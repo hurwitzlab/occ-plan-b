@@ -5,8 +5,7 @@
     "username": "mbomhoff",
     "stagingPath": "/disk2/imicrobe_temp",
     "env": {
-      "IRODS_ENVIRONMENT_FILE": "/home/u20/mbomhoff/.irods/irods_environment.json.imicrobe",
-      "PATH": "/home/mbomhoff/bin"
+      "PATH": "/home/mbomhoff/bin:/home/mbomhoff/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/opt/hadoop/bin"
     },
     "targetHdfsPath": "/user/mbomhoff/occ",
     "hadoopJavaOpts": "-D mapred.child.java.opts=-Xmx32768M -D mapreduce.reduce.shuffle.input.buffer.percent=0.20 -D yarn.scheduler.minimum-allocation-mb=4096 -D mapreduce.map.memory.mb=2048 -D mapreduce.reduce.memory.mb=2048"
