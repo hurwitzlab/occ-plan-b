@@ -1,10 +1,9 @@
 const dblib = require('../db.js');
 const Promise = require('bluebird');
-const sequence = require('promise-sequence');
 const process = require('child_process');
 const pathlib = require('path');
 const shortid = require('shortid');
-const requestp = require('request-promise');
+//const requestp = require('request-promise');
 
 const config = require('../../config.json'); // FIXME pass in
 const apps = require('../../apps.json'); //config.apps ? require(config.apps) : {}; //FIXME pass in
@@ -45,7 +44,7 @@ class Job {
         this.deploymentPath = this.app.deploymentPath;
         this.stagingPath = system.stagingPath + '/' + this.id;
         this.mainLogFile = system.stagingPath + '/jobs.log';
-        this.jobLogFile = this.stagingPath + '/job.log';
+        this.jobLogFile = this.stagingPath + '/data/job.log';
 
         if (system.type == "hadoop") {
             this.targetPath = system.targetHdfsPath + '/' + this.id;
@@ -153,116 +152,6 @@ class Job {
         var archivePath = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
         let rc = await this.system.execute(['iput -Tr', dataStagingPath, archivePath]); // removed "-K checksum" because hanging on node0
         rc = await this.system.execute(['ichmod -r own', this.username, archivePath]);
-    }
-}
-
-class LibraJob {
-    constructor(props) {
-        this.id = props.id || 'planb-' + shortid.generate();
-        this.username = props.username; // CyVerse username of user running the job
-        this.token = props.token;
-        this.name = props.name;
-        this.appId = props.appId;
-        this.startTime = props.startTime;
-        this.endTime = props.endTime;
-        this.inputs = props.inputs || {};
-        this.parameters = props.parameters || {};
-        this.status = props.status || STATUS.CREATED;
-        this.stagingPath = config.remoteStagingPath + '/' + this.id;
-        this.targetPath = config.remoteTargetPath + '/' + this.id;
-        this.mainLogFile = config.remoteStagingPath + '/libra.log';
-        this.jobLogFile = this.stagingPath + '/libra.log';
-    }
-
-    setStatus(newStatus) {
-        if (this.status == newStatus)
-            return;
-
-        this.status = newStatus;
-
-        // TODO
-//        this.history.push({
-//            created: dblib.getTimestamp(),
-//            createdBy: this.username,
-//            description: "",
-//            status: newStatus
-//        });
-    }
-
-    stageInputs() {
-        var self = this;
-        var stagingPath = this.stagingPath + '/data/';
-        var targetPath = this.targetPath + '/data';
-        var stageScript = config.remoteStagingPath + '/stage_data.sh';
-
-        // Copy data staging script to remote system
-        remote_copy('./scripts/stage_data.sh');
-
-        var promises = [];
-
-        // Share output path with "imicrobe"
-        var homePath = '/' + this.username
-        promises.push( () => sharePath(self.token, homePath, "READ", false) ); // Need to share home path for sharing within home path to work
-        var archivePath = homePath + '/' + config.archivePath
-        promises.push( () => remote_make_directory(self.token, archivePath) ); // Create archive path in case it doesn't exist yet (new user)
-        promises.push( () => sharePath(self.token, archivePath, "READ_WRITE", false) );
-
-        // Create log file
-        promises.push( () => remote_command('mkdir -p ' + this.stagingPath + ' && touch ' + this.jobLogFile) );
-
-        if (this.inputs) {
-            //let inputs = Object.values(this.inputs).flat();
-            let inputs = Object.values(this.inputs).reduce((acc, val) => acc.concat(val), []);
-            inputs.forEach( path => { // In reality there will only be one input for Libra, the IN_DIR input
-                console.log('Job ' + this.id + ': staging input: ' + path);
-
-                if (path.startsWith('hsyn:///')) // file is already present via Syndicate mount // TODO find a way to indicate this in job definition
-                    return;
-
-                  var irodsPath = '/iplant/home' + path;
-                  var runStagingScript = () => remote_command('bash ' + stageScript + ' "'+ irodsPath + '" ' + this.id + ' ' + stagingPath + ' ' + targetPath + ' 2>&1 | tee -a ' + this.mainLogFile + ' ' + this.jobLogFile);
-
-                  // Share input path (or parent path if input file) with "imicrobe" (skip for /iplant/home/shared paths)
-                  if (!irodsPath.startsWith('/iplant/home/shared'))
-                      promises.push( () => sharePath(self.token, path/*pathlib.dirname(path)*/, "READ", true) );
-
-                  promises.push( runStagingScript );
-            });
-        }
-
-        return sequence.pipeline(promises);
-    }
-
-    runLibra() {
-        //FIXME use defaults in app definition
-        var KMER_SIZE = this.parameters.KMER_SIZE || 20;
-        var FILTER_ALG = this.parameters.FILTER_ALG || "NOTUNIQUE";
-        var NUM_TASKS = this.parameters.NUM_TASKS || 1;
-        var RUN_MODE = this.parameters.RUN_MODE || "map";
-        var WEIGHTING_ALG = this.parameters.WEIGHTING_ALG || "LOGALITHM";
-        var SCORING_ALG = this.parameters.SCORING_ALG || "COSINESIMILARITY";
-        var JAVA_OPTS = config.javaOpts || "";
-
-        var targetPath = this.targetPath + '/data/';
-        var inputPath;
-        if (this.inputs.IN_DIR[0].startsWith('hsyn:///')) // Syndicate mount
-            inputPath = this.inputs.IN_DIR[0];
-        else // Staged data from Data Store
-            inputPath = targetPath;// + pathlib.basename(this.inputs.IN_DIR);
-
-        // Copy job execution script to remote system
-        remote_copy('./scripts/run_libra.sh');
-        var runScript = config.remoteStagingPath + '/run_libra.sh';
-        return remote_command('sh ' + runScript + ' ' + this.id + ' ' + inputPath + ' ' + config.remoteStagingPath + ' ' + KMER_SIZE + ' ' + NUM_TASKS + ' ' + FILTER_ALG + ' ' + RUN_MODE + ' ' + WEIGHTING_ALG + ' ' + SCORING_ALG + ' ' + JAVA_OPTS + ' 2>&1 | tee -a ' + this.mainLogFile + ' ' + this.jobLogFile);
-    }
-
-    archive() {
-        var self = this;
-        var archivePath = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
-        return remote_command('iput -Tr ' + this.stagingPath + ' ' + archivePath) // removed -K checksum bc hanging on node0
-            .then( () =>
-                remote_command('ichmod -r own ' + this.username + ' ' + archivePath)
-            );
     }
 }
 
