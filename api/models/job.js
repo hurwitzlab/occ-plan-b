@@ -1,4 +1,5 @@
 const dblib = require('../db.js');
+const os = require("os");
 const Promise = require('bluebird');
 const proc = require('child_process');
 const pathlib = require('path');
@@ -312,26 +313,24 @@ class ExecutionSystem {
     }
 
     execute(strOrArray) {
-        let self = this;
-
-        let cmdStr = strOrArray;
-        if (Array.isArray(strOrArray))
-            cmdStr = strOrArray.join(' ');
-
+        let cmdStr = Array.isArray(strOrArray) ? strOrArray.join(' ') : strOrArray;
         let envStr = Object.keys(this.env).map(key => key + "=" + this.env[key]).join(' ');
-        let args = [ self.username + '@' + self.hostname, envStr, cmdStr ];
-        console.log("Executing remote command: ssh " + args.join(' '));
+
+        let args = [ envStr, cmdStr ];
+        if (os.hostname() != this.hostname) // remote system
+            args.unshift('ssh', this.username + '@' + this.hostname, envStr, cmdStr);
 
         return new Promise(function(resolve, reject) {
-            const child = proc.execFile(
-                'ssh', args,
+            console.log("Executing command:", args.join(' '));
+            const child = proc.exec(
+                args.join(' '),
                 { maxBuffer: 10 * 1024 * 1024 }, // 10M -- was overrunning with default 200K
                 (error, stdout, stderr) => {
-                    console.log('remote_command:stdout:', stdout);
-                    console.log('remote_command:stderr:', stderr);
+                    console.log('execute:stdout:', stdout);
+                    console.log('execute:stderr:', stderr);
 
                     if (error) {
-                        console.log('remote_command:error:', error);
+                        console.log('execute:error:', error);
                         reject(error);
                     }
                     else {
