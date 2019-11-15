@@ -93,13 +93,14 @@ class Job {
         await this.system.execute(['touch', this.jobLogFile]);
 
         if (this.inputs) {
-            let inputs = Object.values(this.inputs).reduce((acc, val) => acc.concat(val), []);
+            // Collapse and trim input paths
+            let inputs = Object.values(this.inputs).reduce((acc, val) => acc.concat(val.trim()), []);
 
             // First share the input paths with our IRODS user
             for (let path of inputs) {
                 if (!path.startsWith('/shared')) { // Skip for paths in /iplant/home/shared
                     await sharePath(self.token, path, "READ", true);
-                    if (pathlib.extname(path))
+                    if (pathlib.extname(path)) // If this is an input file then share parent directory too
                         await sharePath(self.token, pathlib.dirname(path), "READ", false);
                 }
             }
