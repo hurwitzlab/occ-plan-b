@@ -94,7 +94,7 @@ class Job {
 
         if (this.inputs) {
             // Collapse and trim input paths
-            let inputs = Object.values(this.inputs).reduce((acc, val) => acc.concat(val.trim()), []);
+            let inputs = Object.values(this.inputs).reduce((acc, val) => acc.concat(val), []).map(path => path.trim());
 
             // First share the input paths with our IRODS user
             for (let path of inputs) {
