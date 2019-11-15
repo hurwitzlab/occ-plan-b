@@ -135,10 +135,15 @@ class Job {
             let param = this.app.parameters.filter(param => param.id == id)[0];
             let arg = param.details.argument;
             let val = this.parameters[id];
-            if (val == "")
+
+            if (val == "") 
                 val = param.value.default;
+
             if (Array.isArray(val))
                 val = val.join(' ');
+ 
+            if (val == "")
+                continue; // skip parameter if blank
 
             if (param.value.type == "flag") {
                 if (val === true)
