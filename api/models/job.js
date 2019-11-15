@@ -321,15 +321,21 @@ class ExecutionSystem {
         let cmdStr = Array.isArray(strOrArray) ? strOrArray.join(' ') : strOrArray;
         let envStr = Object.keys(this.env).map(key => key + "=" + this.env[key]).join(' ');
 
-        let args = [ envStr, cmdStr ];
-        if (os.hostname() != this.hostname) // remote system
-            args.unshift('ssh', this.username + '@' + this.hostname);
+        let sh, args = [];
+        if (os.hostname() == this.hostname) { // local execution
+            sh = "sh";
+            args = [ '-c', '"' + envStr + ' ' + cmdStr + '"' ];
+        }
+        else { // remote execution
+            sh = "ssh";
+            args = [ this.username + '@' + this.hostname, envStr, cmdStr ];
+        }
 
         return new Promise(function(resolve, reject) {
-            console.log("Executing command:", args.join(' '));
-            const child = proc.exec(
-                args.join(' '),
-                { maxBuffer: 10 * 1024 * 1024 }, // 10M -- was overrunning with default 200K
+            console.log("Executing command:", sh, args.join(' '));
+            const child = proc.execFile( // use execFile(), not exec(), to prevent command injection
+                sh, args,
+                { maxBuffer: 10 * 1024 * 1024, shell: true }, // 10M -- was overrunning with default 200K
                 (error, stdout, stderr) => {
                     console.log('execute:stdout:', stdout);
                     console.log('execute:stderr:', stderr);
