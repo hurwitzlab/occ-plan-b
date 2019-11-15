@@ -73,23 +73,23 @@ class Job {
         //var stageScript = config.remoteStagingPath + '/stage_data.sh';
 
         // Make sure staging area exists
-        let rc = await this.system.execute(['mkdir -p', dataStagingPath]);
+        await this.system.execute(['mkdir -p', dataStagingPath]);
 
         // Print IRODS user info for debug
-        rc = await this.system.execute(['iuserinfo']);
+        await this.system.execute(['iuserinfo']);
 
         // Download app to staging area
-        rc = await this.system.execute(['iget -Tr', this.deploymentPath, this.stagingPath]);
+        await this.system.execute(['iget -Tr', this.deploymentPath, this.stagingPath]);
 
         // Share output path with our IRODS user
         var homePath = '/' + this.username
-        rc = await sharePath(self.token, homePath, "READ", false); // Need to share home path for sharing within home path to work
+        await sharePath(self.token, homePath, "READ", false); // Need to share home path for sharing within home path to work
         var archivePath = homePath + '/' + config.archivePath
-        rc = await agave_mkdir(self.token, archivePath); // Create archive path in case it doesn't exist yet (new user)
-        rc = await sharePath(self.token, archivePath, "READ_WRITE", false);
+        await agave_mkdir(self.token, archivePath); // Create archive path in case it doesn't exist yet (new user)
+        await sharePath(self.token, archivePath, "READ_WRITE", false);
 
         // Create log file
-        rc = await this.system.execute(['mkdir -p', this.stagingPath, '&& touch', this.jobLogFile]);
+        await this.system.execute(['mkdir -p', this.stagingPath, '&& touch', this.jobLogFile]);
 
         if (this.inputs) {
             let inputs = Object.values(this.inputs).reduce((acc, val) => acc.concat(val), []);
@@ -97,10 +97,9 @@ class Job {
             // First share the input paths with our IRODS user
             for (let path of inputs) {
                 if (!path.startsWith('/shared')) { // Skip for paths in /iplant/home/shared
-                    rc = await sharePath(self.token, path, "READ", true);
-                    if (pathlib.extname(path)) {
-                        rc = await sharePath(self.token, pathlib.dirname(path), "READ", false);
-                    }
+                    await sharePath(self.token, path, "READ", true);
+                    if (pathlib.extname(path))
+                        await sharePath(self.token, pathlib.dirname(path), "READ", false);
                 }
             }
 
@@ -109,7 +108,7 @@ class Job {
                 console.log('Job ' + this.id + ': staging input: ' + path);
                   var irodsPath = (path.startsWith('/iplant/home') ? path : '/iplant/home' + path);
                   var targetPath = dataStagingPath + pathlib.basename(path);
-                  rc = await this.system.execute(['iget -Tr', irodsPath, targetPath]); // works for file or directory
+                  await this.system.execute(['iget -Tr', irodsPath, targetPath]); // works for file or directory
             }
         }
     }
@@ -150,7 +149,7 @@ class Job {
 
         let subdir = this.deploymentPath.match(/([^\/]*)\/*$/)[1]; //*/
         let runScript = this.stagingPath + '/' + subdir + '/run.sh';
-        let rc = await this.system.execute(['sh', runScript, params.join(' '), ' 2>&1 | tee -a ', this.mainLogFile, this.jobLogFile]);
+        await this.system.execute(['sh', runScript, params.join(' '), ' 2>&1 | tee -a ', this.mainLogFile, this.jobLogFile]);
     }
 
     async archive() {
@@ -158,8 +157,8 @@ class Job {
         var dataStagingPath = this.stagingPath + '/data/';
 
         var archivePath = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
-        let rc = await this.system.execute(['iput -Tr', dataStagingPath, archivePath]); // removed "-K checksum" because hanging on node0
-        rc = await this.system.execute(['ichmod -r own', this.username, archivePath]);
+        await this.system.execute(['iput -Tr', dataStagingPath, archivePath]); // removed "-K checksum" because hanging on node0
+        await this.system.execute(['ichmod -r own', this.username, archivePath]);
     }
 }
 
