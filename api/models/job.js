@@ -335,7 +335,7 @@ class ExecutionSystem {
             console.log("Executing command:", sh, args.join(' '));
             const child = proc.execFile( // use execFile(), not exec(), to prevent command injection
                 sh, args,
-                { maxBuffer: 10 * 1024 * 1024, shell: true }, // 10M -- was overrunning with default 200K
+                { maxBuffer: 10 * 1024 * 1024 }, // 10M -- was overrunning with default 200K
                 (error, stdout, stderr) => {
                     console.log('execute:stdout:', stdout);
                     console.log('execute:stderr:', stderr);
