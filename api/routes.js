@@ -105,7 +105,7 @@ module.exports = function(app, jobManager) {
 
             response.json({
                 status: "success",
-                result: [] //TODO
+                result: job.history
             });
         }
         catch(error) {

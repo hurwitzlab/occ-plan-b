@@ -34,6 +34,7 @@ class Job {
         this.inputs = props.inputs || {};
         this.parameters = props.parameters || {};
         this.status = props.status || STATUS.CREATED;
+        this.history = props.history || [];
 
         this.app = apps[this.appId];
         //if (!this.app) {} //TODO
@@ -57,14 +58,18 @@ class Job {
             return;
 
         this.status = newStatus;
+        this.pushHistory("Transition to " + newStatus);
+    }
 
-        // TODO
-//        this.history.push({
-//            created: dblib.getTimestamp(),
-//            createdBy: this.username,
-//            description: "",
-//            status: newStatus
-//        });
+    pushHistory(description) {
+        console.log("pushHistory:", description);
+
+        this.history.push({
+            created: dblib.getTimestamp(),
+            createdBy: this.username,
+            description: description,
+            status: this.status
+        });
     }
 
     async stageInputs() {
@@ -107,10 +112,10 @@ class Job {
 
             // Transfer input files
             for (let path of inputs) {
-                console.log('Job ' + this.id + ': staging input: ' + path);
-                  var irodsPath = (path.startsWith('/iplant/home') ? path : '/iplant/home' + path);
-                  var targetPath = dataStagingPath + pathlib.basename(path);
-                  await this.system.execute(['iget -Tr', irodsPath, targetPath]); // works for file or directory
+                this.pushHistory('Transferring ' + path);
+                var irodsPath = (path.startsWith('/iplant/home') ? path : '/iplant/home' + path);
+                var targetPath = dataStagingPath + pathlib.basename(path);
+                await this.system.execute(['iget -Tr', irodsPath, targetPath]); // works for file or directory
             }
         }
     }
@@ -243,7 +248,8 @@ class JobManager {
             inputs: JSON.parse(job.inputs),
             parameters: JSON.parse(job.parameters),
             startTime: job.start_time,
-            endTime: job.end_time
+            endTime: job.end_time,
+            history: JSON.parse(job.history)
         });
     }
 
@@ -261,7 +267,7 @@ class JobManager {
     async transitionJob(job, newStatus) {
         console.log('Job.transition: job ' + job.id + ' from ' + job.status + ' to ' + newStatus);
         job.setStatus(newStatus);
-        await this.db.updateJob(job.id, job.status, (newStatus == STATUS.FINISHED));
+        await this.db.updateJob(job.id, job.status, JSON.stringify(job.history), (newStatus == STATUS.FINISHED));
     }
 
     async runJob(job) {
@@ -322,10 +328,11 @@ class ExecutionSystem {
         let cmdStr = Array.isArray(strOrArray) ? strOrArray.join(' ') : strOrArray;
         let envStr = Object.keys(this.env).map(key => key + "=" + this.env[key]).join(' ');
 
+        let isLocal = (os.hostname() == this.hostname);
         let sh, args = [];
-        if (os.hostname() == this.hostname) { // local execution
+        if (isLocal) { // local execution
             sh = "sh";
-            args = [ '-c', '"' + envStr + ' ' + cmdStr + '"' ];
+            args = [ '-c', '"' + envStr + cmdStr + '"' ];
         }
         else { // remote execution
             sh = "ssh";
@@ -336,7 +343,10 @@ class ExecutionSystem {
             console.log("Executing command:", sh, args.join(' '));
             const child = proc.execFile( // use execFile(), not exec(), to prevent command injection
                 sh, args,
-                { maxBuffer: 10 * 1024 * 1024 }, // 10M -- was overrunning with default 200K
+                {
+                    maxBuffer: 10 * 1024 * 1024, // 10M -- was overrunning with default 200K
+                    shell: isLocal
+                },
                 (error, stdout, stderr) => {
                     console.log('execute:stdout:', stdout);
                     console.log('execute:stderr:', stderr);

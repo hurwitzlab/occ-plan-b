@@ -8,5 +8,6 @@ CREATE TABLE jobs (
     inputs     TEXT,
     parameters TEXT,
     start_time TEXT NOT NULL,
-    end_time   TEXT
+    end_time   TEXT,
+    history    TEXT
 );
