@@ -10,7 +10,7 @@ cat db.sql | sqlite3 db.sqlite3
 
 Edit config.json accordingly.  
 
-Make sure SSH public key is installed on target Hadoop server.
+Make sure SSH public key is installed on remote systems.
 
 Running
 =======
