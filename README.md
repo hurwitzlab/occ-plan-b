@@ -1,4 +1,4 @@
-A mock Agave API access node for deploying apps and VMs to remote clusters.
+A mock Agave API access node for deploying jobs locally or on remote clusters.
 
 Setup
 =====
@@ -8,9 +8,9 @@ Setup database:
 cat db.sql | sqlite3 db.sqlite3
 ```
 
-Modify configuration:
+Edit config.json accordingly.  
 
-Edit config.json accordingly.  Make sure SSH public key is installed on target Hadoop server.
+Make sure SSH public key is installed on target Hadoop server.
 
 Running
 =======
