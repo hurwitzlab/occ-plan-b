@@ -4,6 +4,7 @@
     "archivePath": "archive/jobs",
     "dbFilePath": "./db.sqlite3",
     "maxNumRunningJobs": 2,
+    "irodsUsername": "imicrobe",
     "apps": "../apps.json",
     "systems": "../systems.json"
 }

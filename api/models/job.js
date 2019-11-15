@@ -80,7 +80,7 @@ class Job {
         // Download app to staging area
         rc = await this.system.execute(['iget -Tr', this.deploymentPath, this.stagingPath]);
 
-        // Share output path with "imicrobe"
+        // Share output path with our IRODS user
         var homePath = '/' + this.username
         rc = await sharePath(self.token, homePath, "READ", false); // Need to share home path for sharing within home path to work
         var archivePath = homePath + '/' + config.archivePath
@@ -93,7 +93,7 @@ class Job {
         if (this.inputs) {
             let inputs = Object.values(this.inputs).reduce((acc, val) => acc.concat(val), []);
 
-            // First share the input paths with the "imicrobe" user
+            // First share the input paths with our IRODS user
             for (let path of inputs) {
                 if (!path.startsWith('/shared')) { // Skip for paths in /iplant/home/shared
                     rc = await sharePath(self.token, path, "READ", true);
@@ -199,7 +199,7 @@ class JobManager {
 
         const job = await this.db.getJob(id);
 
-        if (!job || (username && job.username != username && username != "imicrobe"))
+        if (!job || (username && job.username != username && username != config.irodsUsername))
             return;
 
         return self.createJob(job);
@@ -209,7 +209,7 @@ class JobManager {
         var self = this;
         var jobs;
 
-        if (!username || username == "imicrobe") // let user "imicrobe" see all jobs for all users
+        if (!username || username == config.irodsUsername) // let admin user see all jobs for all users
             jobs = await this.db.getJobs();
         else
             jobs = await this.db.getJobsForUser(username);
@@ -437,7 +437,7 @@ function sharePath(token, path, permission, recursive) {
 //              throw(new Error("Agave permissions request failed"));
 //          });
 
-    return local_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -d "username=imicrobe&permission=' + permission + '&recursive=' + recursive + '" ' + '"' + url + '"');
+    return local_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -d "username=' + config.irodsUsername + '&permission=' + permission + '&recursive=' + recursive + '" ' + '"' + url + '"');
 }
 
 //function getPermissions(token, path) {
