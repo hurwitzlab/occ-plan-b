@@ -95,8 +95,12 @@ class Job {
 
             // First share the input paths with the "imicrobe" user
             for (let path of inputs) {
-                if (!path.startsWith('/shared')) // Skip for paths in /iplant/home/shared
-                    rc = await sharePath(self.token, path/*pathlib.dirname(path)*/, "READ", true);
+                if (!path.startsWith('/shared')) { // Skip for paths in /iplant/home/shared
+                    rc = await sharePath(self.token, path, "READ", true);
+                    if (pathlib.extname(path)) {
+                        rc = await sharePath(self.token, pathlib.dirname(path), "READ", false);
+                    }
+                }
             }
 
             // Transfer input files
