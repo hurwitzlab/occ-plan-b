@@ -89,7 +89,8 @@ class Job {
         await sharePath(self.token, archivePath, "READ_WRITE", false);
 
         // Create log file
-        await this.system.execute(['mkdir -p', this.stagingPath, '&& touch', this.jobLogFile]);
+        await this.system.execute(['mkdir -p', this.stagingPath]);
+        await this.system.execute(['touch', this.jobLogFile]);
 
         if (this.inputs) {
             let inputs = Object.values(this.inputs).reduce((acc, val) => acc.concat(val), []);
@@ -317,7 +318,7 @@ class ExecutionSystem {
 
         let args = [ envStr, cmdStr ];
         if (os.hostname() != this.hostname) // remote system
-            args.unshift('ssh', this.username + '@' + this.hostname, envStr, cmdStr);
+            args.unshift('ssh', this.username + '@' + this.hostname);
 
         return new Promise(function(resolve, reject) {
             console.log("Executing command:", args.join(' '));
