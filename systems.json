@@ -25,7 +25,7 @@
     "type": "server",
     "hostname": "lytic.hpc.arizona.edu",
     "username": "mbomhoff",
-    "stagingPath": "/data/plan-b/jobs",
+    "stagingPath": "/data/plan-b",
     "env": {
       "IRODS_ENVIRONMENT_FILE": "/home/u20/mbomhoff/.irods/irods_environment.json.imicrobe"
     }
