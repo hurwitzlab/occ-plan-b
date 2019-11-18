@@ -59,38 +59,6 @@
         }
       },
       {
-        "id": "MIN_GROUP_SIZE",
-        "details": {
-          "label": "Minimum size of group in bytes",
-          "description": "",
-          "argument": "-s",
-          "showArgument": true
-        },
-        "value": {
-          "order": 2,
-          "type": "number",
-          "required": false,
-          "visible": false,
-          "default": "10GB"
-        }
-      },
-      {
-        "id": "MAX_NUM_GROUPS",
-        "details": {
-          "label": "Maximum number of groups",
-          "description": "",
-          "argument": "-g",
-          "showArgument": true
-        },
-        "value": {
-          "order": 3,
-          "type": "number",
-          "required": false,
-          "visible": false,
-          "default": "20"
-        }
-      },
-      {
         "id": "FILTER_ALG",
         "details": {
           "label": "Kmer filter algorithm",
@@ -108,26 +76,6 @@
             { "STDDEV": "Standard deviation" },
             { "STDDEV2": "Two's standard deviation" },
             { "NONE": "None" }
-          ]
-        }
-      },
-      {
-        "id": "RUN_MODE",
-        "details": {
-          "label": "Run mode",
-          "description": "",
-          "argument": "-m",
-          "showArgument": true
-        },
-        "value": {
-          "order": 6,
-          "type": "enumeration",
-          "required": true,
-          "visible": false,
-          "default": "MAP",
-          "enum_values": [
-            { "MAP": "MAP" },
-            { "REDUCE": "REDUCE" }
           ]
         }
       },
