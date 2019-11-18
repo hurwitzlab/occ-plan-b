@@ -124,19 +124,8 @@ class Job {
         var dataStagingPath = this.stagingPath + '/data/';
 
         let params = [];
-        for (let id in this.inputs) {
-            let arg = this.app.inputs.filter(inp => inp.id == id)[0].details.argument || "";
-            let val = this.inputs[id];
-            if (Array.isArray(val)) {
-                val = val.map(v => dataStagingPath + pathlib.basename(v));
-                val = val.join(' ');
-            }
-            else if (val != "") {
-                val = dataStagingPath + pathlib.basename(val);
-            }
-            params.push(arg + ' ' + val);
-        }
 
+        // Construct parameter arguments
         for (let id in this.parameters) {
             let param = this.app.parameters.filter(param => param.id == id)[0];
             let arg = param.details.argument;
@@ -159,9 +148,23 @@ class Job {
                 params.push(arg + ' "' + val + '"');
         }
 
+        // Construct input arguments
+        for (let id in this.inputs) {
+            let arg = this.app.inputs.filter(inp => inp.id == id)[0].details.argument || "";
+            let val = this.inputs[id];
+            if (Array.isArray(val)) {
+                val = val.map(v => dataStagingPath + pathlib.basename(v));
+                val = val.join(' ');
+            }
+            else if (val != "") {
+                val = dataStagingPath + pathlib.basename(val);
+            }
+            params.push(arg + ' ' + val);
+        }
+
         let subdir = this.deploymentPath.match(/([^\/]*)\/*$/)[1]; //*/
         let runScript = this.stagingPath + '/' + subdir + '/run.sh';
-        await this.system.execute(['sh', runScript, params.join(' '), ' 2>&1 | tee -a ', this.mainLogFile, this.jobLogFile]);
+        await this.system.execute(['bash', runScript, params.join(' '), ' 2>&1 | tee -a ', this.mainLogFile, this.jobLogFile]);
     }
 
     async archive() {
