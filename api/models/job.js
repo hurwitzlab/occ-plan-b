@@ -1,4 +1,3 @@
-const dblib = require('../db.js');
 const os = require("os");
 const Promise = require('bluebird');
 const proc = require('child_process');
@@ -6,6 +5,7 @@ const pathlib = require('path');
 const shortid = require('shortid');
 //const requestp = require('request-promise');
 
+const dblib = require('../db.js');
 const config = require('../../config.json'); // FIXME pass in
 const apps = require('../../apps.json'); //config.apps ? require(config.apps) : {}; //FIXME pass in
 const systems = require('../../systems.json'); //config.systems ? require(config.systems) : {}; //FIXME pass in

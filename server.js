@@ -1,15 +1,15 @@
 'use strict';
 
-var cluster = require('cluster');
-var express = require('express');
-const job = require('./api/models/job');
+const cluster = require('cluster');
+const express = require('express');
+const JobManager = require('./api/models/job').JobManager;
 
 // Load config file
-var config = require('./config.json');
+const config = require('./config.json');
 
 // Spawn workers and start server
 var app = express();
-var jobManager = new job.JobManager({ isMaster: cluster.isMaster });
+var jobManager = new JobManager({ isMaster: cluster.isMaster });
 require('./api/routes.js')(app, jobManager);
 
 var workers = process.env.WORKERS || require('os').cpus().length;
