@@ -171,7 +171,7 @@
                 "required": false,
                 "visible": true,
                 "enquote": false,
-                "enumValues": [
+                "enum_values": [
                     {
                         "p_compressed+h+v": "Bacteria, Archaea, Viruses, Human (compressed)"
                     },
@@ -222,7 +222,7 @@
                 "required": false,
                 "visible": true,
                 "enquote": false,
-                "enumValues": [
+                "enum_values": [
                     {
                         "fasta": "FASTA"
                     },
