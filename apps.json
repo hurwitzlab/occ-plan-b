@@ -180,9 +180,6 @@
                     },
                     {
                         "p+h+v": "Bacteria, Archaea, Viruses, Human"
-                    },
-                    {
-                        "nt": "NCBI nucleotide non-redundant sequences"
                     }
                 ]
             },
