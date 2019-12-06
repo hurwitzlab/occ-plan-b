@@ -3,18 +3,17 @@ const Promise = require('bluebird');
 const proc = require('child_process');
 const pathlib = require('path');
 const shortid = require('shortid');
-//const requestp = require('request-promise');
 
-const dblib = require('../db.js');
+const dblib = require('./db.js');
 const config = require('../../config.json'); // FIXME pass in
 const apps = require('../../apps.json'); //config.apps ? require(config.apps) : {}; //FIXME pass in
 const systems = require('../../systems.json'); //config.systems ? require(config.systems) : {}; //FIXME pass in
 
 const STATUS = {
     CREATED:         "CREATED",         // Created/queued
-    STAGING_INPUTS:  "STAGING_INPUTS",  // Transferring input files from IRODS to HDFS
-    RUNNING:         "RUNNING",         // Running on Hadoop
-    ARCHIVING:       "ARCHIVING",       // Transferring output files from HDFS to IRODS
+    STAGING_INPUTS:  "STAGING_INPUTS",  // Transferring input files from data store to target system
+    RUNNING:         "RUNNING",         // Running on target system
+    ARCHIVING:       "ARCHIVING",       // Transferring output files from target system to data store
     FINISHED:        "FINISHED",        // All steps finished successfully
     FAILED:          "FAILED",          // Non-zero return code from any step
     STOPPED:         "STOPPED"          // Cancelled due to server restart
@@ -164,7 +163,11 @@ class Job {
 
         let subdir = this.deploymentPath.match(/([^\/]*)\/*$/)[1]; //*/
         let runScript = this.stagingPath + '/' + subdir + '/run.sh';
-        await this.system.execute(['bash', runScript, params.join(' '), ' 2>&1 | tee -a ', this.mainLogFile, this.jobLogFile]);
+
+        if (this.system.type == 'hpc')
+            await this.system.execute(['qsub', '-v', "JOBID=" + this.id + ",CMDARGS=\'" + params.join(' ') + "\'", runScript ]);
+        else
+            await this.system.execute(['bash', runScript, params.join(' '), ' 2>&1 | tee -a ', this.mainLogFile, this.jobLogFile]);
     }
 
     async archive() {
@@ -322,8 +325,10 @@ class JobManager {
 
 class ExecutionSystem {
     constructor(props) {
+        this.type = props.type;
         this.hostname = props.hostname;
         this.username = props.username;
+        this.ssh = props.ssh;
         this.env = props.env || {};
     }
 
@@ -339,7 +344,10 @@ class ExecutionSystem {
         }
         else { // remote execution
             sh = "ssh";
-            args = [ this.username + '@' + this.hostname, envStr, cmdStr ];
+            if (this.ssh) // user defined ssh args
+                args = this.ssh.split(' ').concat([envStr, cmdStr]);
+            else // default ssh args
+                args = [ this.username + '@' + this.hostname, envStr, cmdStr ];
         }
 
         return new Promise(function(resolve, reject) {
@@ -421,127 +429,10 @@ function local_command(strOrArray) {
     });
 }
 
-function remote_copy(local_file) {
-    var cmdStr = 'scp ' + local_file + ' ' + config.remoteHost + ':' + config.remoteStagingPath;
-    console.log("Copying to remote: " + cmdStr);
-
-    const cmd = proc.spawnSync('scp', [ local_file, config.remoteHost + ':' + config.remoteStagingPath ]);
-    console.log( `stderr: ${cmd.stderr.toString()}` );
-    console.log( `stdout: ${cmd.stdout.toString()}` );
-}
-
 function sharePath(token, path, permission, recursive) {
     var url = config.agaveFilesUrl + "pems/system/data.iplantcollaborative.org" + path;
-//    var options = {
-//        method: "POST",
-//        uri: url,
-//        headers: {
-//            Accept: "application/json" ,
-//            Authorization: token
-//        },
-//        form: {
-//            username: "imicrobe",
-//            permission: "READ_WRITE",
-//            recursive: recursive
-//        },
-//        json: true
-//    };
-//
-//    return getPermissions(token, path)
-//          .then( permission => {
-//              if (permission != "READ_WRITE") {
-//                  console.log("Sending POST", url);
-//                  return requestp(options);
-//              }
-//              else
-//                  return new Promise((resolve) => { resolve(); });
-//          })
-//          .catch(function (err) {
-//              console.error(err.message);
-//              throw(new Error("Agave permissions request failed"));
-//          });
-
     return local_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -d "username=' + config.irodsUsername + '&permission=' + permission + '&recursive=' + recursive + '" ' + '"' + url + '"');
 }
-
-//function getPermissions(token, path) {
-//    var url = config.agaveFilesUrl + "pems/system/data.iplantcollaborative.org" + path;
-//    var options = {
-//        method: "GET",
-//        uri: url,
-//        headers: {
-//            Accept: "application/json" ,
-//            Authorization: token
-//        },
-//        form: {
-//            username: "imicrobe",
-//            recursive: false
-//        },
-//        json: true
-//    };
-//
-//    console.log("Sending GET", url);
-//    return requestp(options)
-//        .then(response => {
-//            if (response && response.result) {
-//                var user = response.result.find(user => user.username == "imicrobe");
-//                if (user && user.permission) {
-//                    if (user.permission.write)
-//                        return "READ_WRITE";
-//                    if (user.permission.read)
-//                        return "READ";
-//                }
-//            }
-//
-//            return "NONE";
-//        });
-//}
-
-//function remote_get_file(token, src_path, dest_path) {
-//    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -o ' + dest_path + ' ' + config.agaveFilesUrl + 'media' + src_path);
-//}
-//
-//function remote_get_directory(token, src_path, dest_path) {
-//    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" ' + config.agaveFilesUrl + 'listings/' + src_path)
-//        .then(data => {
-//            var response = JSON.parse(data);
-//            return response.result;
-//        })
-//        .each(file => { // transfer one file at a time to avoid "ssh_exchange_identification" error
-//            if (file.name != '.') {
-//                return remote_get_file(token, file.path, dest_path + '/' + file.name)
-//                    .then(() => {
-//                        // TODO: move gzip to bzip2 conversion to run_libra.sh ...?
-//                        if (file.name.endsWith('.gz') || file.name.endsWith('.gzip')) {
-//                            return remote_gzip_to_bzip2(dest_path + '/' + file.name);
-//                        }
-//                    });
-//            }
-//        });
-//}
-//
-//function remote_gzip_to_bzip2(src_path) {
-//    var path = pathlib.parse(src_path);
-//    var dest_path = path.dir + '/' + path.name + '.bz2';
-//    return remote_command('gunzip --stdout ' + src_path + ' | bzip2 > ' + dest_path + ' && rm ' + src_path);
-//}
-//
-//function remote_put_file(token, src_path, dest_path) {
-//    return remote_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -F "fileToUpload=@' + src_path + '" ' + config.agaveFilesUrl + 'media/' + dest_path)
-//}
-//
-//function remote_put_directory(token, src_path, dest_path) {
-//    return remote_make_directory(token, dest_path)
-//        .then( () => { return remote_command('ls -d -1 ' + src_path + '/*.*') } )
-//        .then( ls => {
-//            return ls.split("\n");
-//        })
-//        .each(file => { // transfer one file at a time to avoid "ssh_exchange_identification" error
-//            if (file) {
-//                return remote_put_file(token, file, dest_path);
-//            }
-//        });
-//}
 
 function agave_mkdir(token, destPath) {
     console.log("Creating remote directory", destPath);

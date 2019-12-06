@@ -29,5 +29,16 @@
     "env": {
       "IRODS_ENVIRONMENT_FILE": "/home/u20/mbomhoff/.irods/irods_environment.json.imicrobe"
     }
+  },
+  "ocelote.hpc.arizona.edu": {
+    "type": "hpc",
+    "hostname": "login.ocelote.hpc.arizona.edu",
+    "username": "mbomhoff",
+    "ssh": "-J mbomhoff@hpc.arizona.edu login.ocelote.hpc.arizona.edu",
+    "stagingPath": "/xdisk/mbomhoff/plan-b",
+    "env": {
+      "IRODS_ENVIRONMENT_FILE": "/home/u20/mbomhoff/.irods/irods_environment.json.imicrobe",
+      "PATH": "/cm/local/apps/gcc/6.1.0/bin:/cm/shared/uaapps/pbspro/19.2.4/sbin:/cm/shared/uaapps/pbspro/19.2.4/bin:/opt/TurboVNC/bin:/cm/shared/uabin:/usr/lib64/qt-3.3/bin:/cm/local/apps/environment-modules/4.0.0/bin:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:/sbin:/usr/sbin:/cm/local/apps/environment-modules/4.0.0/bin:/home/u20/mbomhoff/bin:/rsgrps/bhurwitz/hurwitzlab/bin"
+    }
   }
 }
