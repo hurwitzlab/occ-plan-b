@@ -1,7 +1,8 @@
 const os = require("os");
 const Promise = require('bluebird');
-const proc = require('child_process');
-const pathlib = require('path');
+const { spawn, exec, execFile, execFileSync } = require('child_process');
+const process = require('process');
+const { dirname, basename, extname, parse } = require('path');
 const shortid = require('shortid');
 
 const dblib = require('./db.js');
@@ -80,7 +81,7 @@ class Job {
         await this.system.execute(['mkdir -p', dataStagingPath]);
 
         // Print IRODS user info for debug
-        await this.system.execute(['iuserinfo']);
+        //await this.system.execute(['iuserinfo']);
 
         // Download app to staging area
         await this.system.execute(['iget -Tr', this.deploymentPath, this.stagingPath]);
@@ -104,8 +105,8 @@ class Job {
             for (let path of inputs) {
                 if (!path.startsWith('/shared')) { // Skip for paths in /iplant/home/shared
                     await sharePath(self.token, path, "READ", true);
-                    if (pathlib.extname(path)) // If this is an input file then share parent directory too
-                        await sharePath(self.token, pathlib.dirname(path), "READ", false);
+                    if (extname(path)) // If this is an input file then share parent directory too
+                        await sharePath(self.token, dirname(path), "READ", false);
                 }
             }
 
@@ -113,7 +114,7 @@ class Job {
             for (let path of inputs) {
                 this.pushHistory('Transferring ' + path);
                 var irodsPath = (path.startsWith('/iplant/home') ? path : '/iplant/home' + path);
-                var targetPath = dataStagingPath + pathlib.basename(path);
+                var targetPath = dataStagingPath + basename(path);
                 await this.system.execute(['iget -Tr', irodsPath, targetPath]); // works for file or directory
             }
         }
@@ -143,8 +144,12 @@ class Job {
                 if (val === true)
                     params.push(arg);
             }
-            else
-                params.push(arg + ' "' + val + '"');
+            else {
+                if (param.value.enquote)
+                    val = '\\"' + val + '\\"';
+
+                params.push(arg + ' ' + val);
+            }
         }
 
         // Construct input arguments
@@ -152,11 +157,11 @@ class Job {
             let arg = this.app.inputs.filter(inp => inp.id == id)[0].details.argument || "";
             let val = this.inputs[id];
             if (Array.isArray(val)) {
-                val = val.map(v => dataStagingPath + pathlib.basename(v));
+                val = val.map(v => dataStagingPath + basename(v));
                 val = val.join(' ');
             }
             else if (val != "") {
-                val = dataStagingPath + pathlib.basename(val);
+                val = dataStagingPath + basename(val);
             }
             params.push(arg + ' ' + val);
         }
@@ -165,7 +170,9 @@ class Job {
         let runScript = this.stagingPath + '/' + subdir + '/run.sh';
 
         if (this.system.type == 'hpc')
-            await this.system.execute(['qsub', '-v', "JOBID=" + this.id + ",CMDARGS=\'" + params.join(' ') + "\'", runScript ]);
+            //await this.system.execute(['qsub', '-v', "JOBID=" + this.id + ",CMDARGS=\'" + params.join(' ') + "\'", runScript ]);
+            //await this.system.execute(['sbatch', '--job-name=' + this.id, '--export=JOBID=' + this.id + ',CMDARGS="' + params.join(' ') + '"', runScript ]);
+            await this.system.execute(['sbatch', '--job-name=' + this.id, '--export=JOBID=' + this.id, runScript, params.join(' ') ]);
         else
             await this.system.execute(['bash', runScript, params.join(' '), ' 2>&1 | tee -a ', this.mainLogFile, this.jobLogFile]);
     }
@@ -343,16 +350,20 @@ class ExecutionSystem {
             args = [ '-c', '"' + envStr + cmdStr + '"' ];
         }
         else { // remote execution
-            sh = "ssh";
-            if (this.ssh) // user defined ssh args
-                args = this.ssh.split(' ').concat([envStr, cmdStr]);
-            else // default ssh args
+            if (this.ssh) { // user defined ssh args
+                let sshParts = this.ssh.split(' ');
+                sh = sshParts.shift();
+                args = sshParts.concat([envStr, cmdStr]);
+            }
+            else { // default ssh args
+                sh = "ssh";
                 args = [ this.username + '@' + this.hostname, envStr, cmdStr ];
+            }
         }
 
         return new Promise(function(resolve, reject) {
             console.log("Executing command:", sh, args.join(' '));
-            const child = proc.execFile( // use execFile(), not exec(), to prevent command injection
+            execFile( // use execFile(), not exec(), to prevent command injection
                 sh, args,
                 {
                     maxBuffer: 10 * 1024 * 1024, // 10M -- was overrunning with default 200K
@@ -384,7 +395,7 @@ function remote_command(hostname, username, strOrArray) {
     console.log("Executing remote command: " + remoteCmdStr);
 
     return new Promise(function(resolve, reject) {
-        const child = proc.execFile(
+        const child = execFile(
             'ssh', [ config.remoteUsername + '@' + config.remoteHost, cmdStr ],
             { maxBuffer: 10 * 1024 * 1024 }, // 10mb -- was overrunning with default 200kb
             (error, stdout, stderr) => {
@@ -411,7 +422,7 @@ function local_command(strOrArray) {
     console.log("Executing local command: " + cmdStr);
 
     return new Promise(function(resolve, reject) {
-        const child = proc.exec(
+        const child = exec(
             cmdStr,
             (error, stdout, stderr) => {
                 console.log('local_command:stdout:', stdout);
@@ -436,7 +447,7 @@ function sharePath(token, path, permission, recursive) {
 
 function agave_mkdir(token, destPath) {
     console.log("Creating remote directory", destPath);
-    var path = pathlib.parse(destPath);
+    var path = parse(destPath);
     return local_command('curl -sk -H "Authorization: ' + escape(token) + '" -X PUT -d "action=mkdir&path=' + path.base + '" ' + config.agaveFilesUrl + 'media/' + path.dir);
 }
 
