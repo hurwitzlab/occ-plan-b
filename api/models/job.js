@@ -13,6 +13,7 @@ const systems = require('../../systems.json'); //config.systems ? require(config
 const STATUS = {
     CREATED:         "CREATED",         // Created/queued
     STAGING_INPUTS:  "STAGING_INPUTS",  // Transferring input files from data store to target system
+    SUBMITTING:      "SUBMITTING",      // Submitting to target system
     RUNNING:         "RUNNING",         // Running on target system
     ARCHIVING:       "ARCHIVING",       // Transferring output files from target system to data store
     FINISHED:        "FINISHED",        // All steps finished successfully
@@ -177,6 +178,16 @@ class Job {
             await this.system.execute(['bash', runScript, params.join(' '), ' 2>&1 | tee -a ', this.mainLogFile, this.jobLogFile]);
     }
 
+    async poll() {
+        let finished = false;
+        while (!finished) { //TODO add timeout here
+            let out = await this.system.execute(['squeue', '-h', '-r', '-o', '%j', '--name', this.id]);
+            finished = (out.indexOf(this.id) < 0);
+            console.log("Finished:", this.id, finished);
+            await sleep(10*1000); // 10 second delay
+        }
+    }
+
     async archive() {
         var self = this;
         var dataStagingPath = this.stagingPath + '/data/';
@@ -289,10 +300,22 @@ class JobManager {
         try {
             self.transitionJob(job, STATUS.STAGING_INPUTS);
             await job.stageInputs();
-            self.transitionJob(job, STATUS.RUNNING);
-            await job.run();
+
+            if (job.system.type === 'hpc') {
+                self.transitionJob(job, STATUS.SUBMITTING);
+                await job.run();
+
+                self.transitionJob(job, STATUS.RUNNING);
+                await job.poll();
+            }
+            else {
+                self.transitionJob(job, STATUS.RUNNING);
+                await job.run();
+            }
+
             self.transitionJob(job, STATUS.ARCHIVING);
             await job.archive();
+
             self.transitionJob(job, STATUS.FINISHED);
         }
         catch (error) {
@@ -457,6 +480,10 @@ function escape(str) {
        .replace(/'/g, "\\'")
        .replace(/"/g, "\\\"");
     return str;
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 exports.Job = Job;
