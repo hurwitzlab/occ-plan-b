@@ -12,12 +12,12 @@ var app = express();
 var jobManager = new JobManager({ isMaster: cluster.isMaster });
 require('./api/routes.js')(app, jobManager);
 
-var workers = process.env.WORKERS || require('os').cpus().length;
+var numWorkers = process.env.WORKERS || require('os').cpus().length;
 
 if (cluster.isMaster) {
-    console.log('Start cluster with %s workers', workers);
+    console.log('Start cluster with %s workers', numWorkers);
 
-    for (var i = 0; i < workers; ++i) {
+    for (var i = 0; i < numWorkers; ++i) {
         var worker = cluster.fork().process;
         console.log('Worker %s started.', worker.pid);
     }
