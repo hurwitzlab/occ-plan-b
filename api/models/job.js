@@ -89,10 +89,10 @@ class Job {
 
         // Share output path with our IRODS user
         var homePath = '/' + this.username
-        await sharePath(self.token, homePath, "READ", false); // Need to share home path for sharing within home path to work
+        await agave_sharePath(self.token, homePath, "READ", false); // Need to share home path for sharing within home path to work
         var archivePath = homePath + '/' + config.archivePath
         await agave_mkdir(self.token, archivePath); // Create archive path in case it doesn't exist yet (new user)
-        await sharePath(self.token, archivePath, "READ_WRITE", false);
+        await agave_sharePath(self.token, archivePath, "READ_WRITE", false);
 
         // Create log file
         await this.system.execute(['mkdir -p', this.stagingPath]);
@@ -100,14 +100,18 @@ class Job {
 
         if (this.inputs) {
             // Collapse and trim input paths
-            let inputs = Object.values(this.inputs).reduce((acc, val) => acc.concat(val), []).map(path => path.trim());
+            let inputs = Object.values(this.inputs)
+                .reduce((acc, val) => acc.concat(val), [])
+                .filter(path => path)
+                .map(path => path.trim());
+            console.log('inputs:', inputs);
 
             // First share the input paths with our IRODS user
             for (let path of inputs) {
                 if (!path.startsWith('/shared')) { // Skip for paths in /iplant/home/shared
-                    await sharePath(self.token, path, "READ", true);
+                    await agave_sharePath(self.token, path, "READ", true);
                     if (extname(path)) // If this is an input file then share parent directory too
-                        await sharePath(self.token, dirname(path), "READ", false);
+                        await agave_sharePath(self.token, dirname(path), "READ", false);
                 }
             }
 
@@ -172,7 +176,6 @@ class Job {
 
         if (this.system.type == 'hpc')
             //await this.system.execute(['qsub', '-v', "JOBID=" + this.id + ",CMDARGS=\'" + params.join(' ') + "\'", runScript ]);
-            //await this.system.execute(['sbatch', '--job-name=' + this.id, '--export=JOBID=' + this.id + ',CMDARGS="' + params.join(' ') + '"', runScript ]);
             await this.system.execute(['sbatch', '--job-name=' + this.id, '--export=JOBID=' + this.id, runScript, params.join(' ') ]);
         else
             await this.system.execute(['bash', runScript, params.join(' '), ' 2>&1 | tee -a ', this.mainLogFile, this.jobLogFile]);
@@ -385,7 +388,7 @@ class ExecutionSystem {
         }
 
         return new Promise(function(resolve, reject) {
-            console.log("Executing command:", sh, args.join(' '));
+            console.log("Remote command:", sh, args.join(' '));
             execFile( // use execFile(), not exec(), to prevent command injection
                 sh, args,
                 {
@@ -409,40 +412,12 @@ class ExecutionSystem {
     }
 }
 
-function remote_command(hostname, username, strOrArray) {
-    let cmdStr = strOrArray;
-    if (Array.isArray(strOrArray))
-        cmdStr = strOrArray.join(' ');
-
-    var remoteCmdStr = 'ssh ' + username + '@' + hostname + ' ' + cmdStr;
-    console.log("Executing remote command: " + remoteCmdStr);
-
-    return new Promise(function(resolve, reject) {
-        const child = execFile(
-            'ssh', [ config.remoteUsername + '@' + config.remoteHost, cmdStr ],
-            { maxBuffer: 10 * 1024 * 1024 }, // 10mb -- was overrunning with default 200kb
-            (error, stdout, stderr) => {
-                console.log('remote_command:stdout:', stdout);
-                console.log('remote_command:stderr:', stderr);
-
-                if (error) {
-                    console.log('remote_command:error:', error);
-                    reject(error);
-                }
-                else {
-                    resolve(stdout);
-                }
-            }
-        );
-    });
-}
-
 function local_command(strOrArray) {
     let cmdStr = strOrArray;
     if (Array.isArray(strOrArray))
         cmdStr = strOrArray.join(' ');
 
-    console.log("Executing local command: " + cmdStr);
+    console.log("Local command: " + cmdStr);
 
     return new Promise(function(resolve, reject) {
         const child = exec(
@@ -463,7 +438,7 @@ function local_command(strOrArray) {
     });
 }
 
-function sharePath(token, path, permission, recursive) {
+function agave_sharePath(token, path, permission, recursive) {
     var url = config.agaveFilesUrl + "pems/system/data.iplantcollaborative.org" + path;
     return local_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -d "username=' + config.irodsUsername + '&permission=' + permission + '&recursive=' + recursive + '" ' + '"' + url + '"');
 }
