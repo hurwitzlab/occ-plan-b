@@ -38,10 +38,16 @@ class Job {
         this.history = props.history || [];
 
         this.app = apps[this.appId];
-        //if (!this.app) {} //TODO
+        if (!this.app) {
+            console.log('Error: missing app', this.appId);
+            return;
+        }
 
         let system = systems[this.app.executionSystem];
-        //if (!system) {} //TODO
+        if (!system) {
+            console.log('Error: missing system', this.app.executionSystem);
+            return;
+        }
         this.system = new ExecutionSystem(system);
 
         this.deploymentPath = this.app.deploymentPath;
