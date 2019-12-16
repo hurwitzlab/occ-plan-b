@@ -159,15 +159,19 @@ class Job {
 
         // Construct input arguments
         for (let id in this.inputs) {
-            let arg = this.app.inputs.filter(inp => inp.id == id)[0].details.argument || "";
             let val = this.inputs[id];
-            if (Array.isArray(val)) {
-                val = val.map(v => dataStagingPath + basename(v));
-                val = val.join(' ');
-            }
-            else if (val != "") {
+
+            if (Array.isArray(val))
+                val = val.filter(path => path)
+                    .map(path => dataStagingPath + basename(path))
+                    .join(' ');
+            else
                 val = dataStagingPath + basename(val);
-            }
+
+            if (!val)
+                continue; // skip input if blank
+
+            let arg = this.app.inputs.filter(inp => inp.id == id)[0].details.argument || "";
             params.push(arg + ' ' + val);
         }
 
