@@ -275,38 +275,111 @@
     ],
     "outputs": []
   },
-  "sra-fastq-dump-0.0.1": {
-    "name": "sra-fastq-dump",
-    "version": "0.0.1",
-    "shortDescription": "Download sequence files from SRA",
-    "longDescription": "Download sequence files from SRA",
-    "helpURI": "https://ncbi.github.io/sra-tools/fastq-dump.html",
-    "deploymentPath": "/iplant/home/mbomhoff/applications/sra-fastq-dump-0.0.1/plan-b",
+  "mash-all-vs-all-0.0.6u1": {
+    "name": "mash-all-vs-all",
+    "version": "0.0.6",
+    "shortDescription": "Pairwise sequence comparison via Mash",
+    "longDescription": "Pairwise sequence comparison via Mash",
+    "helpURI": "http://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0997-x",
+    "deploymentPath": "/iplant/home/mbomhoff/applications/mash-all-vs-all-0.0.6/planb-lytic",
     "deploymentSystem": "data.iplantcollaborative.org",
     "executionSystem": "lytic.hpc.arizona.edu",
-    "executionType": "SERVER",
-    "inputs": [],
-    "parameters": [
+    "inputs": [
         {
-            "id": "ACCN",
+            "id": "QUERY",
             "value": {
                 "default": "",
-                "type": "string",
-                "order": 1,
+                "order": 0,
                 "validator": "",
                 "required": true,
                 "visible": true,
                 "enquote": false
             },
+            "semantics": {
+                "ontology": [
+                    "http://sswapmeet.sswap.info/mime/application/X-bam"
+                ],
+                "minCardinality": 1,
+                "maxCardinality": -1,
+                "fileTypes": [
+                    "raw-0"
+                ]
+            },
             "details": {
-                "description": "SRA accession, e.g. SRR1303791",
-                "label": "Accession",
-                "argument": "",
+                "description": "",
+                "label": "Directory/FAST(A|Q)(.gz) files to compare",
+                "argument": "-q ",
+                "repeatArgument": false,
+                "showArgument": true
+            }
+        },
+        {
+            "id": "ALIAS_FILE",
+            "value": {
+                "default": "",
+                "order": 0,
+                "validator": "",
+                "required": false,
+                "visible": true,
+                "enquote": false
+            },
+            "semantics": {
+                "ontology": [
+                    "xsd:string"
+                ],
+                "minCardinality": 1,
+                "maxCardinality": 1,
+                "fileTypes": []
+            },
+            "details": {
+                "description": "Tab-delimited file containing name/alias columns",
+                "label": "Alias file",
+                "argument": "-a ",
+                "repeatArgument": false,
+                "showArgument": true
+            }
+        }
+    ],
+    "parameters": [
+        {
+            "id": "KMER_SIZE",
+            "value": {
+                "default": "21",
+                "type": "string",
+                "order": 1,
+                "required": false,
+                "visible": true,
+                "enquote": false,
+                "validator": ""
+            },
+            "details": {
+                "description": "Hashes will be based on strings of this many nucleotides. Canonical nucleotides are used by default.",
+                "label": "Kmer size",
+                "argument": "-k ",
+                "repeatArgument": false,
+                "showArgument": true
+            }
+        },
+        {
+            "id": "SKETCH_SIZE",
+            "value": {
+                "default": "1000",
+                "type": "string",
+                "order": 2,
+                "required": false,
+                "visible": true,
+                "enquote": false,
+                "validator": ""
+            },
+            "details": {
+                "description": "Each sketch will have at most this many non-redundant min-hashes.",
+                "label": "Sketch size",
+                "argument": "-s ",
                 "repeatArgument": false,
                 "showArgument": true
             }
         }
     ],
     "outputs": []
-  }
+}
 }
