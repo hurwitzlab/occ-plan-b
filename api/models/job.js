@@ -5,7 +5,7 @@ const process = require('process');
 const { dirname, basename, extname, parse } = require('path');
 const shortid = require('shortid');
 
-const dblib = require('./db.js');
+const { Database, getTimestamp } = require('./db.js');
 const config = require('../../config.json'); // FIXME pass config params into JobManager constructor
 
 const STATUS = {
@@ -36,6 +36,11 @@ class Job {
         this.history = props.history || [];
 
         this.app = props.app;
+        if (this.app) {
+            this.batchQueue = props.batch_queue || this.app.defaultQueue;
+            this.maxRunTime = props.max_run_time || this.app.defaultMaxRunTime;
+        }
+
         this.system = props.system;
         if (this.system) {
             this.stagingPath = this.system.stagingPath + '/' + this.id;
@@ -58,7 +63,7 @@ class Job {
         console.log("pushHistory:", description);
 
         this.history.push({
-            created: dblib.getTimestamp(),
+            created: getTimestamp(),
             createdBy: this.username,
             description: description,
             status: this.status
@@ -68,7 +73,6 @@ class Job {
     async stageInputs() {
         var self = this;
         var dataStagingPath = this.stagingPath + '/data/';
-        //var stageScript = config.remoteStagingPath + '/stage_data.sh';
 
         // Make sure staging area exists
         await this.system.execute(['mkdir -p', dataStagingPath]);
@@ -143,7 +147,7 @@ class Job {
             }
             else {
                 if (param.value.enquote)
-                    val = '\\"' + val + '\\"';
+                    val = '"' + val + '"';
 
                 params.push(arg + ' ' + val);
             }
@@ -171,8 +175,20 @@ class Job {
         let runScript = this.stagingPath + '/' + subdir + '/run.sh';
 
         if (this.system.type == 'hpc')
-            //await this.system.execute(['qsub', '-v', "JOBID=" + this.id + ",CMDARGS=\'" + params.join(' ') + "\'", runScript ]);
-            await this.system.execute(['sbatch', '--job-name=' + this.id, '--export=JOBID=' + this.id, runScript, params.join(' ') ]);
+            //await this.system.execute(['qsub', '-v', "PLANB_JOBPATH=" + this.stagingPath + ",CMDARGS=\'" + params.join(' ') + "\'", runScript ]);
+            await this.system.execute([
+                'sbatch',
+                '--job-name=' + this.id,
+                '--account=iPlant-Collabs', //FIXME hardcoded
+                '--nodes=' + this.app.defaultNodeCount || 1,
+                '--ntasks=' + this.maxRunTime || this.app.defaultMaxRunTime || 1,
+                '--mem=' + this.app.defaultMemoryPerNode,
+                '--time=' + this.app.defaultMaxRunTime || "24:00:00",
+                '--partition=' + this.batchQueue || this.app.defaultQueue || 'normal',
+                '--export=PLANB_JOBPATH=' + this.stagingPath,
+                runScript,
+                params.join(' ')
+            ]);
         else
             await this.system.execute(['bash', runScript, params.join(' '), ' 2>&1 | tee -a ', this.mainLogFile, this.jobLogFile]);
     }
@@ -215,7 +231,7 @@ class JobManager {
 
         console.log("JobManager.init");
 
-        this.db = new dblib.Database();
+        this.db = new Database();
         await this.db.open(config.dbFilePath);
 
         // Set pending jobs to cancelled
@@ -308,7 +324,7 @@ class JobManager {
     async transitionJob(job, newStatus) {
         console.log('Job.transition: job ' + job.id + ' from ' + job.status + ' to ' + newStatus);
         job.setStatus(newStatus);
-        await this.db.updateJob(job.id, job.status, JSON.stringify(job.history), (newStatus == STATUS.FINISHED));
+        await this.db.updateJob(job.id, job.status, job.system.hostname, job.system.type, job.batchQueue, job.maxRunTime, JSON.stringify(job.history), (newStatus == STATUS.FINISHED));
     }
 
     async runJob(job) {
