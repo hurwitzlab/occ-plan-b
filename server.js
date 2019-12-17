@@ -25,9 +25,14 @@ fs
 
 const systems = require(config.systems);
 
+var jobManager = new JobManager({
+    isMaster: cluster.isMaster,
+    apps: apps,
+    systems: systems
+});
+
 // Spawn workers and start server
 var app = express();
-var jobManager = new JobManager({ isMaster: cluster.isMaster, apps: apps, systems: systems });
 require('./api/routes.js')(app, apps, jobManager);
 
 var numWorkers = process.env.WORKERS || require('os').cpus().length;
