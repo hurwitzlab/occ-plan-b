@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require("fs");
+const { basename, extname } = require('path');
 const cluster = require('cluster');
 const express = require('express');
 const JobManager = require('./api/models/job').JobManager;
@@ -7,10 +9,26 @@ const JobManager = require('./api/models/job').JobManager;
 // Load config file
 const config = require('./config.json');
 
+// Load apps and systems
+const apps = {};
+fs
+    .readdirSync(config.apps)
+    .filter(file =>
+        extname(file) === '.json'
+    )
+    .forEach(file => {
+        let data = fs.readFileSync(config.apps + '/' + file);
+        let app = JSON.parse(data);
+        let appId = basename(file, '.json');
+        apps[appId] = app;
+    });
+
+const systems = require(config.systems);
+
 // Spawn workers and start server
 var app = express();
-var jobManager = new JobManager({ isMaster: cluster.isMaster });
-require('./api/routes.js')(app, jobManager);
+var jobManager = new JobManager({ isMaster: cluster.isMaster, apps: apps, systems: systems });
+require('./api/routes.js')(app, apps, jobManager);
 
 var numWorkers = process.env.WORKERS || require('os').cpus().length;
 

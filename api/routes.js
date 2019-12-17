@@ -1,11 +1,9 @@
 'use strict';
 
-const job  = require('./models/job');
+const { Job } = require('./models/job');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const requestp = require('request-promise');
-const config = require('../config.json');
-const apps = config.apps ? require(config.apps) : {}; //FIXME
 
 // Create error types
 class MyError extends Error {
@@ -20,7 +18,7 @@ const ERR_UNAUTHORIZED = new MyError("Unauthorized", 401);
 const ERR_PERMISSION_DENIED = new MyError("Permission denied", 403);
 const ERR_NOT_FOUND = new MyError("Not found", 404);
 
-module.exports = function(app, jobManager) {
+module.exports = function(app, apps, jobManager) {
     app.use(cors());
     app.use(bodyParser.json()); // support json encoded bodies
     app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
@@ -123,7 +121,7 @@ module.exports = function(app, jobManager) {
     app.post('/jobs', async (request, response) => {
         requireAuth(request);
 
-        var j = new job.Job(request.body);
+        var j = new Job(request.body);
         j.username = request.auth.profile.username;
         j.token = request.auth.profile.token;
         await jobManager.submitJob(j);

@@ -6,9 +6,7 @@ const { dirname, basename, extname, parse } = require('path');
 const shortid = require('shortid');
 
 const dblib = require('./db.js');
-const config = require('../../config.json'); // FIXME pass in
-const apps = require('../../apps.json'); //config.apps ? require(config.apps) : {}; //FIXME pass in
-const systems = require('../../systems.json'); //config.systems ? require(config.systems) : {}; //FIXME pass in
+const config = require('../../config.json'); // FIXME pass config params into JobManager constructor
 
 const STATUS = {
     CREATED:         "CREATED",         // Created/queued
@@ -37,26 +35,14 @@ class Job {
         this.status = props.status || STATUS.CREATED;
         this.history = props.history || [];
 
-        this.app = apps[this.appId];
-        if (!this.app) {
-            console.log('Error: missing app', this.appId);
-            return;
-        }
-
-        let system = systems[this.app.executionSystem];
-        if (!system) {
-            console.log('Error: missing system', this.app.executionSystem);
-            return;
-        }
-        this.system = new ExecutionSystem(system);
-
-        this.deploymentPath = this.app.deploymentPath;
-        this.stagingPath = system.stagingPath + '/' + this.id;
-        this.mainLogFile = system.stagingPath + '/jobs.log';
-        this.jobLogFile = this.stagingPath + '/data/job.log';
-
-        if (system.type == "hadoop") {
-            this.targetPath = system.targetHdfsPath + '/' + this.id;
+        this.app = props.app;
+        this.system = props.system;
+        if (this.system) {
+            this.stagingPath = this.system.stagingPath + '/' + this.id;
+            this.mainLogFile = this.system.stagingPath + '/jobs.log';
+            this.jobLogFile = this.stagingPath + '/data/job.log';
+            if (this.system.type == "hadoop")
+                this.targetPath = this.system.targetHdfsPath + '/' + this.id;
         }
     }
 
@@ -91,7 +77,7 @@ class Job {
         //await this.system.execute(['iuserinfo']);
 
         // Download app to staging area
-        await this.system.execute(['iget -Tr', this.deploymentPath, this.stagingPath]);
+        await this.system.execute(['iget -Tr', this.app.deploymentPath, this.stagingPath]);
 
         // Share output path with our IRODS user
         var homePath = '/' + this.username
@@ -181,7 +167,7 @@ class Job {
             params.push(arg + ' ' + val);
         }
 
-        let subdir = this.deploymentPath.match(/([^\/]*)\/*$/)[1]; //*/
+        let subdir = this.app.deploymentPath.match(/([^\/]*)\/*$/)[1]; //*/
         let runScript = this.stagingPath + '/' + subdir + '/run.sh';
 
         if (this.system.type == 'hpc')
@@ -216,6 +202,10 @@ class JobManager {
         this.isMaster = props.isMaster;
         this.UPDATE_INITIAL_DELAY = 5000; // milliseconds
         this.UPDATE_REFRESH_DELAY = 5000; // milliseconds
+
+        this.apps = props.apps;
+        this.systems = {};
+        props.systems.forEach(system => this.systems[system.hostname] = new ExecutionSystem(system));
 
         this.init();
     }
@@ -271,10 +261,22 @@ class JobManager {
 
         const jobs = await this.db.getActiveJobs();
 
-        return jobs.map( job => { return self.createJob(job) } );
+        return jobs.map( job => self.createJob(job) );
     }
 
     createJob(job) {
+        let app = this.apps[job.app_id];
+        if (!app) {
+            console.log('Error: missing app', job.app_id);
+            return;
+        }
+
+        let system = this.systems[app.executionSystem];
+        if (!system) {
+            console.log('Error: missing system', app.executionSystem);
+            return;
+        }
+
         return new Job({
             id: job.job_id,
             username: job.username,
@@ -286,7 +288,9 @@ class JobManager {
             parameters: JSON.parse(job.parameters),
             startTime: job.start_time,
             endTime: job.end_time,
-            history: JSON.parse(job.history)
+            history: JSON.parse(job.history),
+            app: app,
+            system: system
         });
     }
 
@@ -373,6 +377,11 @@ class ExecutionSystem {
         this.username = props.username;
         this.ssh = props.ssh;
         this.env = props.env || {};
+        this.stagingPath = props.stagingPath;
+        this.targetHdfsPath = props.targetHdfsPath;
+        //this.hadoopJavaOpts = props.hadoopJavaOpts; //FIXME
+
+        //TODO check for required props
     }
 
     execute(strOrArray) {
