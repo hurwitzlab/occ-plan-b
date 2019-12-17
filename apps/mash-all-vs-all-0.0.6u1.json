@@ -5,7 +5,6 @@
     "longDescription": "Pairwise sequence comparison via Mash",
     "helpURI": "http://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-0997-x",
     "deploymentPath": "/iplant/home/mbomhoff/applications/mash-all-vs-all-0.0.6/planb-lytic",
-    "deploymentSystem": "data.iplantcollaborative.org",
     "executionSystem": "lytic.hpc.arizona.edu",
     "inputs": [
         {

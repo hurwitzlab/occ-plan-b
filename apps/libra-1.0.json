@@ -5,7 +5,6 @@
   "shortDescription": "Compute similarity between large metagenomic samples",
   "helpURI": "https://github.com/iychoi/libra",
   "deploymentPath": "/iplant/home/mbomhoff/applications/libra-1.0/plan-b",
-  "deploymentSystem": "data.iplantcollaborative.org",
   "executionSystem": "node0.hadoop.cs.arizona.edu",
   "inputs": [
     {
