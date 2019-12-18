@@ -11,6 +11,9 @@ CREATE TABLE jobs (
     system_type  TEXT,
     batch_queue  TEXT,
     max_run_time TEXT,
+    node_count   TEXT,
+    processors_per_node TEXT,
+    memory_per_node TEXT,
     start_time   TEXT NOT NULL,
     end_time     TEXT,
     history      TEXT

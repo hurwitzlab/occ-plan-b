@@ -37,8 +37,11 @@ class Job {
 
         this.app = props.app;
         if (this.app) {
-            this.batchQueue = props.batch_queue || this.app.defaultQueue;
-            this.maxRunTime = props.max_run_time || this.app.defaultMaxRunTime;
+            this.batchQueue = props.batchQueue || this.app.defaultQueue;
+            this.maxRunTime = props.maxRunTime || this.app.defaultMaxRunTime;
+            this.nodeCount = props.nodeCount || this.app.defaultNodeCount;
+            this.processorsPerNode = props.processorsPerNode || this.app.defaultProcessorsPerNode;
+            this.memoryPerNode = props.memoryPerNode || this.app.defaultMemoryPerNode;
         }
 
         this.system = props.system;
@@ -178,16 +181,18 @@ class Job {
             //await this.system.execute(['qsub', '-v', "PLANB_JOBPATH=" + this.stagingPath + ",CMDARGS=\'" + params.join(' ') + "\'", runScript ]);
             await this.system.execute([
                 'sbatch',
-                '--job-name=' + this.id,
-                '--account=iPlant-Collabs', //FIXME hardcoded
-                '--nodes=' + this.app.defaultNodeCount || 1,
-                '--ntasks=' + this.maxRunTime || this.app.defaultMaxRunTime || 1,
-                '--mem=' + this.app.defaultMemoryPerNode,
-                '--time=' + this.app.defaultMaxRunTime || "24:00:00",
-                '--partition=' + this.batchQueue || this.app.defaultQueue || 'normal',
+                '-J', this.id,
+                '-A', 'iPlant-Collabs', //FIXME hardcoded
+                '-o', this.jobLogFile,
+                '-e', this.jobLogFile,
+                '-N', this.nodeCount || 1,
+                '-n', this.processorsPerNode || 1,
+                //'--mem=' + this.app.defaultMemoryPerNode || 96, // Stampede2 User Guide: "Not available. If you attempt to use this option, the scheduler will not accept your job."
+                '-t', this.maxRunTime || "24:00:00",
+                '-p', this.batchQueue || 'normal',
                 '--export=PLANB_JOBPATH=' + this.stagingPath,
                 runScript,
-                params.join(' ')
+                params.map(escape).join(' ')
             ]);
         else
             await this.system.execute(['bash', runScript, params.join(' '), ' 2>&1 | tee -a ', this.mainLogFile, this.jobLogFile]);
@@ -302,6 +307,11 @@ class JobManager {
             status: job.status,
             inputs: JSON.parse(job.inputs),
             parameters: JSON.parse(job.parameters),
+            batchQueue: job.batch_queue,
+            maxRunTime: job.max_run_time,
+            nodeCount: job.node_count,
+            processorsPerNode: job.processors_per_node,
+            memoryPerNode: job.memory_per_node,
             startTime: job.start_time,
             endTime: job.end_time,
             history: JSON.parse(job.history),
@@ -324,7 +334,12 @@ class JobManager {
     async transitionJob(job, newStatus) {
         console.log('Job.transition: job ' + job.id + ' from ' + job.status + ' to ' + newStatus);
         job.setStatus(newStatus);
-        await this.db.updateJob(job.id, job.status, job.system.hostname, job.system.type, job.batchQueue, job.maxRunTime, JSON.stringify(job.history), (newStatus == STATUS.FINISHED));
+        await this.db.updateJob(
+            job.id, job.status, job.system.hostname, job.system.type,
+            job.batchQueue, job.maxRunTime, job.nodeCount, job.processorsPerNode, job.memoryPerNode,
+            JSON.stringify(job.history),
+            (newStatus == STATUS.FINISHED)
+        );
     }
 
     async runJob(job) {
@@ -484,12 +499,8 @@ function agave_mkdir(token, destPath) {
     return local_command('curl -sk -H "Authorization: ' + escape(token) + '" -X PUT -d "action=mkdir&path=' + path.base + '" ' + config.agaveFilesUrl + 'media/' + path.dir);
 }
 
-function escape(str) {
-    str.replace(/\\/g, "\\\\")
-       .replace(/\$/g, "\\$")
-       .replace(/'/g, "\\'")
-       .replace(/"/g, "\\\"");
-    return str;
+function escape(s) {
+    return s.replace(/(["\s'$`\\])/g, '\\$1');
 }
 
 function sleep(ms) {
