@@ -490,13 +490,13 @@ function local_command(strOrArray) {
 
 function agave_sharePath(token, path, permission, recursive) {
     var url = config.agaveFilesUrl + "pems/system/data.iplantcollaborative.org" + path;
-    return local_command('curl -sk -H "Authorization: ' + escape(token) + '" -X POST -d "username=' + config.irodsUsername + '&permission=' + permission + '&recursive=' + recursive + '" ' + '"' + url + '"');
+    return local_command('curl -sk -H "Authorization: ' + token + '" -X POST -d "username=' + config.irodsUsername + '&permission=' + permission + '&recursive=' + recursive + '" ' + '"' + url + '"');
 }
 
 function agave_mkdir(token, destPath) {
     console.log("Creating remote directory", destPath);
     var path = parse(destPath);
-    return local_command('curl -sk -H "Authorization: ' + escape(token) + '" -X PUT -d "action=mkdir&path=' + path.base + '" ' + config.agaveFilesUrl + 'media/' + path.dir);
+    return local_command('curl -sk -H "Authorization: ' + token + '" -X PUT -d "action=mkdir&path=' + path.base + '" ' + config.agaveFilesUrl + 'media/' + path.dir);
 }
 
 function escape(s) {
