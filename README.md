@@ -17,8 +17,8 @@ Running
 
 For development:
 ```
-npm install nodemon
-nodemon server.js
+npm install nodemon -g
+npm run dev
 ```
 
 For production:

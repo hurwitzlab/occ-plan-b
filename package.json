@@ -5,7 +5,12 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon server.js"
+    "dev": "nodemon server.js"
+  },
+  "nodemonConfig": {
+    "watch": ["api", "apps", "systems.json", "config.json"],
+    "ext": "js",
+    "delay": "2000"
   },
   "author": "Matt Bomhoff",
   "license": "MIT",
