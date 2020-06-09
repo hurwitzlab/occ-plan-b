@@ -6,7 +6,7 @@ const { dirname, basename, extname, parse } = require('path');
 const shortid = require('shortid');
 
 const { Database, getTimestamp } = require('./db.js');
-const config = require('../../config.json'); // FIXME pass config params into JobManager constructor
+const config = require('../../config.json'); //TODO pass config params into JobManager constructor
 
 const STATUS = {
     CREATED:         "CREATED",         // Created/queued
@@ -74,8 +74,8 @@ class Job {
     }
 
     async stageInputs() {
-        var self = this;
-        var dataStagingPath = this.stagingPath + '/data/';
+        let self = this;
+        const dataStagingPath = this.stagingPath + '/data/';
 
         // Make sure staging area exists
         await this.system.execute(['mkdir -p', dataStagingPath]);
@@ -87,9 +87,9 @@ class Job {
         await this.system.execute(['iget -Tr', this.app.deploymentPath, this.stagingPath]);
 
         // Share output path with our IRODS user
-        var homePath = '/' + this.username
+        const homePath = '/' + this.username
         await agave_sharePath(self.token, homePath, "READ", false); // Need to share home path for sharing within home path to work
-        var archivePath = homePath + '/' + config.archivePath
+        const archivePath = homePath + '/' + config.archivePath
         await agave_mkdir(self.token, archivePath); // Create archive path in case it doesn't exist yet (new user)
         await agave_sharePath(self.token, archivePath, "READ_WRITE", false);
 
@@ -117,15 +117,15 @@ class Job {
             // Transfer input files
             for (let path of inputs) {
                 this.pushHistory('Transferring ' + path);
-                var irodsPath = (path.startsWith('/iplant/home') ? path : '/iplant/home' + path);
-                var targetPath = dataStagingPath + basename(path);
+                const irodsPath = (path.startsWith('/iplant/home') ? path : '/iplant/home' + path);
+                const targetPath = dataStagingPath + basename(path);
                 await this.system.execute(['iget -Tr', irodsPath, targetPath]); // works for file or directory
             }
         }
     }
 
     async run() {
-        var dataStagingPath = this.stagingPath + '/data/';
+        const dataStagingPath = this.stagingPath + '/data/';
 
         let params = [];
 
@@ -209,10 +209,10 @@ class Job {
     }
 
     async archive() {
-        var self = this;
-        var dataStagingPath = this.stagingPath + '/data/';
+        let self = this;
+        const dataStagingPath = this.stagingPath + '/data/';
+        const archivePath = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
 
-        var archivePath = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
         await this.system.execute(['iput -Tr', dataStagingPath, archivePath]); // removed "-K checksum" because hanging on node0
         await this.system.execute(['ichmod -r own', this.username, archivePath]);
     }
@@ -232,7 +232,7 @@ class JobManager {
     }
 
     async init() {
-        var self = this;
+        let self = this;
 
         console.log("JobManager.init");
 
@@ -255,8 +255,7 @@ class JobManager {
     }
 
     async getJob(id, username) {
-        var self = this;
-
+        let self = this;
         const job = await this.db.getJob(id);
 
         if (!job || (username && job.username != username && username != config.irodsUsername))
@@ -266,8 +265,8 @@ class JobManager {
     }
 
     async getJobs(username) {
-        var self = this;
-        var jobs;
+        let self = this;
+        let jobs;
 
         if (!username || username == config.irodsUsername) // let admin user see all jobs for all users
             jobs = await this.db.getJobs();
@@ -278,8 +277,7 @@ class JobManager {
     }
 
     async getActiveJobs() {
-        var self = this;
-
+        let self = this;
         const jobs = await this.db.getActiveJobs();
 
         return jobs.map( job => self.createJob(job) );
@@ -343,7 +341,7 @@ class JobManager {
     }
 
     async runJob(job) {
-        var self = this;
+        let self = this;
 
         try {
             self.transitionJob(job, STATUS.STAGING_INPUTS);
@@ -373,12 +371,11 @@ class JobManager {
     }
 
     async update() {
-        var self = this;
+        let self = this;
 
-        //console.log("Update ...")
-        var jobs = await self.getActiveJobs();
+        let jobs = await self.getActiveJobs();
         if (jobs && jobs.length) {
-            var numJobsRunning = jobs.reduce( (sum, value) => {
+            let numJobsRunning = jobs.reduce( (sum, value) => {
                 if (value.status == STATUS.STAGING_INPUTS || value.status == STATUS.RUNNING)
                     return sum + 1
                 else return sum;
@@ -410,7 +407,7 @@ class ExecutionSystem {
         this.env = props.env || {};
         this.stagingPath = props.stagingPath;
         this.targetHdfsPath = props.targetHdfsPath;
-        //this.hadoopJavaOpts = props.hadoopJavaOpts; //FIXME
+        //this.hadoopJavaOpts = props.hadoopJavaOpts; //TODO
 
         //TODO check for required props
     }
@@ -489,13 +486,13 @@ function local_command(strOrArray) {
 }
 
 function agave_sharePath(token, path, permission, recursive) {
-    var url = config.agaveFilesUrl + "pems/system/data.iplantcollaborative.org" + path;
+    const url = config.agaveFilesUrl + "pems/system/data.iplantcollaborative.org" + path;
     return local_command('curl -sk -H "Authorization: ' + token + '" -X POST -d "username=' + config.irodsUsername + '&permission=' + permission + '&recursive=' + recursive + '" ' + '"' + url + '"');
 }
 
 function agave_mkdir(token, destPath) {
     console.log("Creating remote directory", destPath);
-    var path = parse(destPath);
+    const path = parse(destPath);
     return local_command('curl -sk -H "Authorization: ' + token + '" -X PUT -d "action=mkdir&path=' + path.base + '" ' + config.agaveFilesUrl + 'media/' + path.dir);
 }
 

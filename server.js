@@ -25,24 +25,24 @@ fs
 
 const systems = require(config.systems);
 
-var jobManager = new JobManager({
+const jobManager = new JobManager({
     isMaster: cluster.isMaster,
     apps: apps,
     systems: systems
 });
 
 // Spawn workers and start server
-var app = express();
+const app = express();
 require('./api/routes.js')(app, apps, jobManager);
 
-var numWorkers = process.env.WORKERS || require('os').cpus().length;
+const numWorkers = process.env.WORKERS || require('os').cpus().length;
 
 if (cluster.isMaster) {
     console.log('Start cluster with %s workers', numWorkers);
 
-    for (var i = 0; i < numWorkers; ++i) {
-        var worker = cluster.fork().process;
-        console.log('Worker %s started.', worker.pid);
+    for (let i = 0; i < numWorkers; ++i) {
+        const worker = cluster.fork().process;
+        console.log('Worker %s started', worker.pid);
     }
 
     cluster.on('online', function(worker) {
@@ -55,7 +55,7 @@ if (cluster.isMaster) {
     });
 }
 else {
-    var server = app.listen(config.serverPort, function() {
+    const server = app.listen(config.serverPort, function() {
         console.log('Process ' + process.pid + ' is listening to all incoming requests on port ' + config.serverPort);
     });
 }

@@ -21,10 +21,10 @@ module.exports = function(app, apps, jobManager) {
     app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
 
     app.use(requestLogger);
-    app.use(authenticate);
+    app.use(authenticate); // Tapis authentication
 
     app.get('/apps/:id(\\S+)', requireAuth, function(request, response) {
-        var id = request.params.id;
+        const id = request.params.id;
 
         if (typeof apps[id] === 'undefined') {
             response.status(404).json({
@@ -41,7 +41,7 @@ module.exports = function(app, apps, jobManager) {
     });
 
     app.get('/jobs', requireAuth, async (request, response) => {
-        var jobs = await jobManager.getJobs(request.auth.profile.username);
+        let jobs = await jobManager.getJobs(request.auth.profile.username);
         if (jobs) {
             jobs = jobs.map(j => {
                 delete j.inputs;
@@ -64,7 +64,7 @@ module.exports = function(app, apps, jobManager) {
 
     app.get('/jobs/:id([\\w\\-]+)', requireAuth, async (request, response) => {
         try {
-            var job = await jobManager.getJob(request.params.id, request.auth.profile.username);
+            let job = await jobManager.getJob(request.params.id, request.auth.profile.username);
             if (!job)
                 throw(ERR_NOT_FOUND);
 
@@ -86,7 +86,7 @@ module.exports = function(app, apps, jobManager) {
 
     app.get('/jobs/:id([\\w\\-]+)/history', requireAuth, async (request, response) => {
         try {
-            var job = await jobManager.getJob(request.params.id, request.auth.profile.username);
+            let job = await jobManager.getJob(request.params.id, request.auth.profile.username);
             if (!job)
                 throw(ERR_NOT_FOUND);
 
@@ -108,7 +108,7 @@ module.exports = function(app, apps, jobManager) {
     });
 
     app.post('/jobs', requireAuth, async (request, response) => {
-        var j = new Job(request.body);
+        let j = new Job(request.body);
         j.username = request.auth.profile.username;
         j.token = request.auth.profile.token;
         await jobManager.submitJob(j);
@@ -124,7 +124,7 @@ module.exports = function(app, apps, jobManager) {
     app.use(errorHandler);
 
     // Catch-all function
-    app.get('*', function(req, res, next){
+    app.get('*', function(req, res, next) {
         res.status(404).send("Unknown route: " + req.path);
     });
 }
@@ -146,7 +146,7 @@ function errorHandler(error, req, res, next) {
 
 // Middleware to force authentication
 function requireAuth(req, res, next) {
-    console.log("REQUIRE AUTH !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    console.log("REQUIRE AUTH")
     if (!req || !req.auth || !req.auth.validToken || !req.auth.profile) {
         const err = new Error('Unauthorized');
         err.status = 401;
@@ -157,12 +157,12 @@ function requireAuth(req, res, next) {
     }
 }
 
-// Middleware to validate Agave bearer token
+// Middleware to validate Tapis bearer token
 async function authenticate(req, res, next) {
-    var token;
+    let token;
     if (req && req.headers)
         token = req.headers.authorization;
-    console.log("validateAgaveToken: token:", token);
+    console.log("authenticate: token:", token);
 
     req.auth = {
         validToken: false
@@ -172,13 +172,13 @@ async function authenticate(req, res, next) {
         next();
     else {
         try {
-            const response = await getAgaveProfile(token);
+            const response = await getProfile(token);
             if (!response || response.status != "success") {
-                console.log('validateAgaveToken: !!!! Bad profile status: ' + response.status);
+                console.log('authenticate: !!!! Bad profile status: ' + response.status);
                 return;
             }
 
-            console.log("validateAgaveToken: *** success ***  username:", response.result.username);
+            console.log("authenticate: *** success ***  username:", response.result.username);
             response.result.token = token;
 
             req.auth = {
@@ -187,7 +187,7 @@ async function authenticate(req, res, next) {
             };
         }
         catch(error) {
-            console.log("validateAgaveToken: !!!!", error.message);
+            console.log("authenticate: !!!!", error.message);
         }
         finally {
             next();
@@ -195,7 +195,7 @@ async function authenticate(req, res, next) {
     }
 }
 
-function getAgaveProfile(token) {
+function getProfile(token) {
     return requestp({
         method: "GET",
         uri: "https://agave.iplantc.org/profiles/v2/me", //FIXME hardcoded
