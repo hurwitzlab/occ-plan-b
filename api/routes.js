@@ -5,17 +5,14 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const requestp = require('request-promise');
 
-// Create error types
+
 class MyError extends Error {
-    constructor(message, statusCode) {
+    constructor(message, status) {
         super(message);
-        this.statusCode = statusCode;
+        this.status = status;
     }
 }
 
-const ERR_BAD_REQUEST = new MyError("Bad request", 400);
-const ERR_UNAUTHORIZED = new MyError("Unauthorized", 401);
-const ERR_PERMISSION_DENIED = new MyError("Permission denied", 403);
 const ERR_NOT_FOUND = new MyError("Not found", 404);
 
 module.exports = function(app, apps, jobManager) {
@@ -24,15 +21,13 @@ module.exports = function(app, apps, jobManager) {
     app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
 
     app.use(requestLogger);
-    app.use(agaveTokenValidator);
+    app.use(authenticate);
 
-    app.get('/apps/:id(\\S+)', function(request, response) {
-        requireAuth(request);
-
+    app.get('/apps/:id(\\S+)', requireAuth, function(request, response) {
         var id = request.params.id;
 
         if (typeof apps[id] === 'undefined') {
-            response.json({
+            response.status(404).json({
                 status: "failure",
                 message: "App " + id + " not found"
             });
@@ -45,9 +40,7 @@ module.exports = function(app, apps, jobManager) {
         });
     });
 
-    app.get('/jobs', async (request, response) => {
-        requireAuth(request);
-
+    app.get('/jobs', requireAuth, async (request, response) => {
         var jobs = await jobManager.getJobs(request.auth.profile.username);
         if (jobs) {
             jobs = jobs.map(j => {
@@ -69,9 +62,7 @@ module.exports = function(app, apps, jobManager) {
         });
     });
 
-    app.get('/jobs/:id([\\w\\-]+)', async (request, response) => {
-        requireAuth(request);
-
+    app.get('/jobs/:id([\\w\\-]+)', requireAuth, async (request, response) => {
         try {
             var job = await jobManager.getJob(request.params.id, request.auth.profile.username);
             if (!job)
@@ -93,9 +84,7 @@ module.exports = function(app, apps, jobManager) {
         };
     });
 
-    app.get('/jobs/:id([\\w\\-]+)/history', async (request, response) => {
-        requireAuth(request);
-        
+    app.get('/jobs/:id([\\w\\-]+)/history', requireAuth, async (request, response) => {
         try {
             var job = await jobManager.getJob(request.params.id, request.auth.profile.username);
             if (!job)
@@ -118,9 +107,7 @@ module.exports = function(app, apps, jobManager) {
         });
     });
 
-    app.post('/jobs', async (request, response) => {
-        requireAuth(request);
-
+    app.post('/jobs', requireAuth, async (request, response) => {
         var j = new Job(request.body);
         j.username = request.auth.profile.username;
         j.token = request.auth.profile.token;
@@ -151,18 +138,27 @@ function errorHandler(error, req, res, next) {
     console.log("ERROR ".padEnd(80, "!"));
     console.log(error.stack);
 
-    let statusCode = error.statusCode || 500;
+    let status = error.status || 500;
     let message = error.message || "Unknown error";
 
-    res.status(statusCode).send(message);
+    res.status(status).send(message);
 }
 
-function requireAuth(req) {
-    if (!req || !req.auth || !req.auth.validToken || !req.auth.profile)
-        throw(ERR_UNAUTHORIZED);
+// Middleware to force authentication
+function requireAuth(req, res, next) {
+    console.log("REQUIRE AUTH !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    if (!req || !req.auth || !req.auth.validToken || !req.auth.profile) {
+        const err = new Error('Unauthorized');
+        err.status = 401;
+        next(err);
+    }
+    else {
+        next();
+    }
 }
 
-function agaveTokenValidator(req, res, next) {
+// Middleware to validate Agave bearer token
+async function authenticate(req, res, next) {
     var token;
     if (req && req.headers)
         token = req.headers.authorization;
@@ -175,39 +171,34 @@ function agaveTokenValidator(req, res, next) {
     if (!token)
         next();
     else {
-        getAgaveProfile(token)
-        .then(function (response) {
+        try {
+            const response = await getAgaveProfile(token);
             if (!response || response.status != "success") {
                 console.log('validateAgaveToken: !!!! Bad profile status: ' + response.status);
                 return;
             }
-            else {
-                response.result.token = token;
-                return response.result;
-            }
-        })
-        .then( profile => {
-            if (profile) {
-                console.log("validateAgaveToken: *** success ***  username:", profile.username);
 
-                req.auth = {
-                    validToken: true,
-                    profile: profile
+            console.log("validateAgaveToken: *** success ***  username:", response.result.username);
+            response.result.token = token;
 
-                };
-            }
-        })
-        .catch( error => {
+            req.auth = {
+                validToken: true,
+                profile: response.result
+            };
+        }
+        catch(error) {
             console.log("validateAgaveToken: !!!!", error.message);
-        })
-        .finally(next);
+        }
+        finally {
+            next();
+        }
     }
 }
 
 function getAgaveProfile(token) {
     return requestp({
         method: "GET",
-        uri: "https://agave.iplantc.org/profiles/v2/me", // FIXME hardcoded
+        uri: "https://agave.iplantc.org/profiles/v2/me", //FIXME hardcoded
         headers: {
             Authorization: token,
             Accept: "application/json"
