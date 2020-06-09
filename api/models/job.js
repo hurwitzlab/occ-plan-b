@@ -182,7 +182,7 @@ class Job {
             await this.system.execute([
                 'sbatch',
                 '-J', this.id,
-                '-A', 'iPlant-Collabs', //FIXME hardcoded
+                '-A', config.accountName,
                 '-o', this.jobLogFile,
                 '-e', this.jobLogFile,
                 '-N', this.nodeCount || 1,

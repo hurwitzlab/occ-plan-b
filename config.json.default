@@ -5,6 +5,7 @@
     "dbFilePath": "./db.sqlite3",
     "maxNumRunningJobs": 2,
     "irodsUsername": "imicrobe",
+    "accountName": "iPlant-Collabs",
     "apps": "./apps",
     "systems": "./systems.json"
 }
