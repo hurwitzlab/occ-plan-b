@@ -39,27 +39,30 @@ hostname        Hostname of the remote (or local) system.
 type            Type of system: "server", "hpc", or "hadoop".
 username        User on remote system.
 stagingPath     Data staging directory on remote system.
-ssh             (optional) Custom ssh command and parameters.  For example to ssh proxy use "ssh -J myuser@hpc.arizona.edu login.ocelote.hpc.arizona.edu".
+ssh             (optional) Custom ssh command and parameters.  
+                For example to ssh proxy use "ssh -J myuser@hpc.arizona.edu login.ocelote.hpc.arizona.edu".
 env             (optional) Environment variables to set on remote system. 
                 For example:
                   {
                     "IRODS_ENVIRONMENT_FILE": "/home/myuser/irods_environment.json",
                     "PATH": "/opt/irods/4.2.2/usr/bin:/home/myuser/bin"
                   }
+targetHdfsPath  (type="hadoop") Data staging directory in HDFS.
+hadoopJavaOpts  (type="hadoop", optional) Java command-line options for setting variables or memory limits.
 ```
 
 App Configuration
 =================
-Add a TAPIS app description file to apps/.  Set the `executionSystem` and `deploymentPath` fields to correspond to the target system specified in `systems.json`.
+Add a TAPIS app description file to the `apps/` directory.  Set the `executionSystem` and `deploymentPath` fields to correspond to the target system specified in `systems.json`.
 
-See the TAPIS documentation for details: https://tacc-cloud.readthedocs.io/projects/agave/en/latest/agave/guides/apps/introduction.html
+See the TAPIS documentation for more info on the app description file:<br> 
+https://tacc-cloud.readthedocs.io/projects/agave/en/latest/agave/guides/apps/introduction.html
 
 REST API
 ========
-The API closely resembles the TAPIS Jobs API: 
+The API closely resembles the TAPIS Jobs API:<br>
 https://tacc-cloud.readthedocs.io/projects/agave/en/latest/agave/guides/jobs/introduction.html
 
-Supported endpoints:
 ```
 GET /apps/[id]              Fetch app by ID
 GET /jobs                   Fetch all jobs
