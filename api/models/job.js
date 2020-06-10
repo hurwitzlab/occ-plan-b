@@ -5,7 +5,7 @@ const process = require('process');
 const { dirname, basename, extname, parse } = require('path');
 const shortid = require('shortid');
 
-const { Database, getTimestamp } = require('./db.js');
+const { Database, getTimestamp } = require('./db');
 const config = require('../../config.json'); //TODO pass config params into JobManager constructor
 
 const STATUS = {
@@ -88,10 +88,10 @@ class Job {
 
         // Share output path with our IRODS user
         const homePath = '/' + this.username
-        await agave_sharePath(self.token, homePath, "READ", false); // Need to share home path for sharing within home path to work
+        await remoteSharePath(self.token, homePath, "READ", false); // Need to share home path for sharing within home path to work
         const archivePath = homePath + '/' + config.archivePath
-        await agave_mkdir(self.token, archivePath); // Create archive path in case it doesn't exist yet (new user)
-        await agave_sharePath(self.token, archivePath, "READ_WRITE", false);
+        await remoteMakeDir(self.token, archivePath); // Create archive path in case it doesn't exist yet (new user)
+        await remoteSharePath(self.token, archivePath, "READ_WRITE", false);
 
         // Create log file
         await this.system.execute(['mkdir -p', this.stagingPath]);
@@ -108,9 +108,9 @@ class Job {
             // First share the input paths with our IRODS user
             for (let path of inputs) {
                 if (!path.startsWith('/shared')) { // Skip for paths in /iplant/home/shared
-                    await agave_sharePath(self.token, path, "READ", true);
+                    await remoteSharePath(self.token, path, "READ", true);
                     if (extname(path)) // If this is an input file then share parent directory too
-                        await agave_sharePath(self.token, dirname(path), "READ", false);
+                        await remoteSharePath(self.token, dirname(path), "READ", false);
                 }
             }
 
@@ -174,8 +174,8 @@ class Job {
             params.push(arg + ' ' + val);
         }
 
-        let subdir = this.app.deploymentPath.match(/([^\/]*)\/*$/)[1]; //*/
-        let runScript = this.stagingPath + '/' + subdir + '/run.sh';
+        const subdir = this.app.deploymentPath.match(/([^\/]*)\/*$/)[1]; //*/
+        const runScript = `${this.stagingPath}/${subdir}/run.sh`;
 
         if (this.system.type == 'hpc')
             //await this.system.execute(['qsub', '-v', "PLANB_JOBPATH=" + this.stagingPath + ",CMDARGS=\'" + params.join(' ') + "\'", runScript ]);
@@ -211,7 +211,7 @@ class Job {
     async archive() {
         let self = this;
         const dataStagingPath = this.stagingPath + '/data/';
-        const archivePath = '/iplant/home/' + this.username + '/' + config.archivePath + '/' + 'job-' + this.id;
+        const archivePath = `/iplant/home/${this.username}/${config.archivePath}/job-${this.id}`;
 
         await this.system.execute(['iput -Tr', dataStagingPath, archivePath]); // removed "-K checksum" because hanging on node0
         await this.system.execute(['ichmod -r own', this.username, archivePath]);
@@ -330,7 +330,7 @@ class JobManager {
     }
 
     async transitionJob(job, newStatus) {
-        console.log('Job.transition: job ' + job.id + ' from ' + job.status + ' to ' + newStatus);
+        console.log('Job.transition: job', job.id, 'from', job.status, 'to', newStatus);
         job.setStatus(newStatus);
         await this.db.updateJob(
             job.id, job.status, job.system.hostname, job.system.type,
@@ -383,7 +383,7 @@ class JobManager {
 
             jobs.forEach(
                 job => {
-//                    console.log("update: job " + job.id + " is " + job.status + " numRunning=" + numJobsRunning);
+//                    console.log("update: job", job.id, "is", job.status, "numRunning = ", numJobsRunning);
                     if (numJobsRunning < MAX_JOBS_RUNNING && job.status == STATUS.CREATED) {
                         self.runJob(job);
                         numJobsRunning++;
@@ -459,7 +459,7 @@ class ExecutionSystem {
     }
 }
 
-function local_command(strOrArray) {
+function localCommand(strOrArray) {
     let cmdStr = strOrArray;
     if (Array.isArray(strOrArray))
         cmdStr = strOrArray.join(' ');
@@ -470,11 +470,11 @@ function local_command(strOrArray) {
         const child = exec(
             cmdStr,
             (error, stdout, stderr) => {
-                console.log('local_command:stdout:', stdout);
-                console.log('local_command:stderr:', stderr);
+                console.log('localCommand:stdout:', stdout);
+                console.log('localCommand:stderr:', stderr);
 
                 if (error) {
-                    console.log('local_command:error:', error);
+                    console.log('localCommand:error:', error);
                     reject(error);
                 }
                 else {
@@ -485,15 +485,17 @@ function local_command(strOrArray) {
     });
 }
 
-function agave_sharePath(token, path, permission, recursive) {
+function remoteSharePath(token, path, permission, recursive) {
+    console.log("Sharing remote directory", path, permission);
     const url = config.agaveFilesUrl + "pems/system/data.iplantcollaborative.org" + path;
-    return local_command('curl -sk -H "Authorization: ' + token + '" -X POST -d "username=' + config.irodsUsername + '&permission=' + permission + '&recursive=' + recursive + '" ' + '"' + url + '"');
+    return localCommand(`curl -sk -H "Authorization: ${token}" -X POST -d "username=${config.irodsUsername}&permission=${permission}&recursive=${recursive}" "${url}"`);
 }
 
-function agave_mkdir(token, destPath) {
+function remoteMakeDir(token, destPath) {
     console.log("Creating remote directory", destPath);
     const path = parse(destPath);
-    return local_command('curl -sk -H "Authorization: ' + token + '" -X PUT -d "action=mkdir&path=' + path.base + '" ' + config.agaveFilesUrl + 'media/' + path.dir);
+    const url = config.agaveFilesUrl + "media/" + path.dir;
+    return localCommand(`curl -sk -H "Authorization: ${token}" -X PUT -d "action=mkdir&path=${path.base}" "${url}"`);
 }
 
 function escape(s) {

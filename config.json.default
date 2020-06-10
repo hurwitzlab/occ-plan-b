@@ -1,5 +1,6 @@
 {
     "serverPort": 3008,
+    "agaveProfileUrl": "https://agave.iplantc.org/profiles/v2/me",
     "agaveFilesUrl": "https://agave.iplantc.org/files/v2/",
     "archivePath": "archive/jobs",
     "dbFilePath": "./db.sqlite3",

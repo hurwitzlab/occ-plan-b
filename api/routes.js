@@ -1,9 +1,10 @@
 'use strict';
 
-const { Job } = require('./models/job');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const requestp = require('request-promise');
+const { Job } = require('./models/job');
+const config = require('../config.json');
 
 
 class MyError extends Error {
@@ -144,7 +145,7 @@ function errorHandler(error, req, res, next) {
     res.status(status).send(message);
 }
 
-// Middleware to force authentication
+// Middleware to require authentication
 function requireAuth(req, res, next) {
     console.log("REQUIRE AUTH")
     if (!req || !req.auth || !req.auth.validToken || !req.auth.profile) {
@@ -157,7 +158,7 @@ function requireAuth(req, res, next) {
     }
 }
 
-// Middleware to validate Tapis bearer token
+// Middleware to validate TAPIS bearer authentication token
 async function authenticate(req, res, next) {
     let token;
     if (req && req.headers)
@@ -198,7 +199,7 @@ async function authenticate(req, res, next) {
 function getProfile(token) {
     return requestp({
         method: "GET",
-        uri: "https://agave.iplantc.org/profiles/v2/me", //FIXME hardcoded
+        uri: config.agaveProfileUrl,
         headers: {
             Authorization: token,
             Accept: "application/json"
