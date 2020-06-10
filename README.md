@@ -1,21 +1,22 @@
+Plan B
+======
+
 A service for deploying containerized jobs locally or on remote clusters.
 
-Setup
-=====
+##Setup
 
 1. Create database
 ```
 cat db.sql | sqlite3 db.sqlite3
 ```
 
-2. Edit config.json accordingly.  
+2. Copy `config.json.default` to `config.json` and edit accordingly.  
 
 3. Make sure SSH public key is installed on remote systems.
 
 4. Configure IRODS for remote user on remote systems.
 
-Running
-=======
+##Running
 
 For development:
 ```
@@ -30,8 +31,7 @@ pm2 start --name plan-b server.js
 sudo pm2 startup systemd
 ```
 
-System Configuration
-=====================
+##System Configuration
 Add an entry to `systems.json`:
 
 ```
@@ -51,15 +51,13 @@ targetHdfsPath  (type="hadoop") Data staging directory in HDFS.
 hadoopJavaOpts  (type="hadoop", optional) Java command-line options for setting variables or memory limits.
 ```
 
-App Configuration
-=================
+##App Configuration
 Add a TAPIS app description file to the `apps/` directory.  Set the `executionSystem` and `deploymentPath` fields to correspond to the target system specified in `systems.json`.
 
 See the TAPIS documentation for more info on the app description file:<br> 
 https://tacc-cloud.readthedocs.io/projects/agave/en/latest/agave/guides/apps/introduction.html
 
-REST API
-========
+##REST API
 The API closely resembles the TAPIS Jobs API:<br>
 https://tacc-cloud.readthedocs.io/projects/agave/en/latest/agave/guides/jobs/introduction.html
 
