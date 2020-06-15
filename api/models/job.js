@@ -74,7 +74,7 @@ class Job {
     }
 
     async stageInputs() {
-        let self = this;
+        const self = this;
         const dataStagingPath = this.stagingPath + '/data/';
 
         // Make sure staging area exists
@@ -99,7 +99,7 @@ class Job {
 
         if (this.inputs) {
             // Collapse and trim input paths
-            let inputs = Object.values(this.inputs)
+            const inputs = Object.values(this.inputs)
                 .reduce((acc, val) => acc.concat(val), [])
                 .filter(path => path)
                 .map(path => path.trim());
@@ -194,8 +194,9 @@ class Job {
                 runScript,
                 params.map(escape).join(' ')
             ]);
-        else
+        else {
             await this.system.execute(['bash', runScript, params.join(' '), ' 2>&1 | tee -a ', this.mainLogFile, this.jobLogFile]);
+        }
     }
 
     async poll() {
@@ -232,7 +233,7 @@ class JobManager {
     }
 
     async init() {
-        let self = this;
+        const self = this;
 
         console.log("JobManager.init");
 
@@ -255,7 +256,7 @@ class JobManager {
     }
 
     async getJob(id, username) {
-        let self = this;
+        const self = this;
         const job = await this.db.getJob(id);
 
         if (!job || (username && job.username != username && username != config.irodsUsername))
@@ -265,7 +266,7 @@ class JobManager {
     }
 
     async getJobs(username) {
-        let self = this;
+        const self = this;
         let jobs;
 
         if (!username || username == config.irodsUsername) // let admin user see all jobs for all users
@@ -277,20 +278,20 @@ class JobManager {
     }
 
     async getActiveJobs() {
-        let self = this;
+        const self = this;
         const jobs = await this.db.getActiveJobs();
 
         return jobs.map( job => self.createJob(job) );
     }
 
     createJob(job) {
-        let app = this.apps[job.app_id];
+        const app = this.apps[job.app_id];
         if (!app) {
             console.log('Error: missing app', job.app_id);
             return;
         }
 
-        let system = this.systems[app.executionSystem];
+        const system = this.systems[app.executionSystem];
         if (!system) {
             console.log('Error: missing system', app.executionSystem);
             return;
@@ -341,7 +342,7 @@ class JobManager {
     }
 
     async runJob(job) {
-        let self = this;
+        const self = this;
 
         try {
             self.transitionJob(job, STATUS.STAGING_INPUTS);
@@ -371,11 +372,11 @@ class JobManager {
     }
 
     async update() {
-        let self = this;
+        const self = this;
 
-        let jobs = await self.getActiveJobs();
+        const jobs = await self.getActiveJobs();
         if (jobs && jobs.length) {
-            let numJobsRunning = jobs.reduce( (sum, value) => {
+            const numJobsRunning = jobs.reduce( (sum, value) => {
                 if (value.status == STATUS.STAGING_INPUTS || value.status == STATUS.RUNNING)
                     return sum + 1
                 else return sum;
@@ -413,10 +414,10 @@ class ExecutionSystem {
     }
 
     execute(strOrArray) {
-        let cmdStr = Array.isArray(strOrArray) ? strOrArray.join(' ') : strOrArray;
-        let envStr = Object.keys(this.env).map(key => key + "=" + this.env[key]).join(' ');
+        const cmdStr = Array.isArray(strOrArray) ? strOrArray.join(' ') : strOrArray;
+        const envStr = Object.keys(this.env).map(key => key + "=" + this.env[key]).join(' ');
 
-        let isLocal = (os.hostname() == this.hostname);
+        const isLocal = (os.hostname() == this.hostname);
         let sh, args = [];
         if (isLocal) { // local execution
             sh = "sh";
@@ -436,7 +437,7 @@ class ExecutionSystem {
 
         return new Promise(function(resolve, reject) {
             console.log("Remote command:", sh, args.join(' '));
-            execFile( // use execFile(), not exec(), to prevent command injection
+            const proc = execFile( // use execFile(), not exec(), to prevent command injection
                 sh, args,
                 {
                     maxBuffer: 10 * 1024 * 1024, // 10M -- was overrunning with default 200K
@@ -455,6 +456,10 @@ class ExecutionSystem {
                     }
                 }
             );
+
+            proc.on('exit', function (code) {
+                console.log("execute:exit:", code);
+            });
         });
     }
 }
