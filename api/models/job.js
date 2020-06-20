@@ -376,7 +376,7 @@ class JobManager {
 
         const jobs = await self.getActiveJobs();
         if (jobs && jobs.length) {
-            const numJobsRunning = jobs.reduce( (sum, value) => {
+            let numJobsRunning = jobs.reduce( (sum, value) => {
                 if (value.status == STATUS.STAGING_INPUTS || value.status == STATUS.RUNNING)
                     return sum + 1
                 else return sum;
